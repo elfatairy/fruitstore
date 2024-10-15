@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import logo from './logo.svg';
+import { useEffect } from 'react';
 import './App.css';
-import { onValue, ref } from 'firebase/database';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import AuthProvider, { RequireAuth, useAuth } from './context/AuthContext';
-import ClientsPage from './pages/ClientsPage';
+import { RequireAuth, useAuth } from './context/AuthContext';
+import ProductsPage from './pages/ProductsPage';
+import ItemsPage from './pages/ItemsPage';
 import SuppliersPage from './pages/SuppliersPage';
+import ClientsPage from './pages/ClientsPage';
 
 function App() {
   const { signin } = useAuth();
@@ -22,8 +21,10 @@ function App() {
   return (
     <>
       <RequireAuth>
-        {/* <ClientsPage /> */}
-        <SuppliersPage />
+        <ClientsPage />
+        {/* <SuppliersPage /> */}
+        {/* <ProductsPage /> */}
+        {/* <ItemsPage /> */}
       </RequireAuth>
       {/* JOE: put the routes here and add this wrapper to every component requiring authorization 
       <RequireAuth></RequireAuth> if it requires admin role add this property role={roles.ADMIN}  */}

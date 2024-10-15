@@ -1,8 +1,11 @@
-import { addDoc, collection, doc, Firestore, getDoc, getDocs, query, Timestamp, where } from "firebase/firestore";
+import { addDoc, collection, doc, Firestore, getDoc, getDocs, query, Timestamp, updateDoc, where } from "firebase/firestore";
 // import { attemptFirebasePush } from "./firebase";
-import { FIREBASE_CREATING_ERROR, FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, REQUEST_LIMIT } from "../config/Constants";
+import { FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, FIREBASE_NOTFOUND_ERROR } from "../config/Constants";
 import { FirebaseError } from "../errors/FirebaseError";
-import { Client } from "../types";
+import { Client, Receipt, ReceiptType } from "../types";
+import { getProduct } from "./products";
+import { createReceipt, createReceiptItem } from "./receipts";
+import { createItem, decreaseItem, getItem } from "./items";
 
 export const getAllClients = async (database: Firestore): Promise<Map<string, Client>> => {
     try {
@@ -16,6 +19,9 @@ export const getAllClients = async (database: Firestore): Promise<Map<string, Cl
         return clients;
     } catch (e) {
         console.log("Error getting all clients", e);
+        if(e instanceof FirebaseError) {
+            throw e
+        }
         throw new FirebaseError(FIREBASE_ERROR);
     }
 }
@@ -31,10 +37,13 @@ export const getClient = async (database: Firestore, clientUuid: string): Promis
                 username, number, balance, createdAt, updatedAt
             };
         } else {
-            throw new FirebaseError(FIREBASE_ERROR);
+            throw new FirebaseError(FIREBASE_NOTFOUND_ERROR);
         }
     } catch (e) {
         console.log("Error getting a client", e);
+        if(e instanceof FirebaseError) {
+            throw e
+        }
         throw new FirebaseError(FIREBASE_ERROR);
     }
 }
@@ -62,7 +71,88 @@ export const createClient = async (database: Firestore, username: string, number
             throw new FirebaseError(FIREBASE_ERROR);
         }
     } catch (e) {
-        console.log("Error adding item", e);
+        console.log("Error adding client", e);
+        if(e instanceof FirebaseError) {
+            throw e
+        }
+        throw new FirebaseError(FIREBASE_ERROR);
+    }
+}
+
+export const updateBalance = async (database: Firestore, clientUuid: string, amount: number): Promise<number> => {
+    try {
+        const clientRef = doc(database, "clients", clientUuid);
+        const newBalance = (await getDoc(clientRef)).data()!.balance + amount;
+        updateDoc(clientRef, {
+            balance: newBalance,
+            updatedAt: Timestamp.now() 
+        });
+
+        return newBalance;
+    } catch (e) {
+        console.log("Error updating balance", e);
+        if(e instanceof FirebaseError) {
+            throw e
+        }
+        throw new FirebaseError(FIREBASE_ERROR);
+    }
+}
+
+export type exportItem = {
+    itemUuid: string, 
+    mass: number, 
+    boxes: number,
+    price: number
+}
+export const exportItemsHelper = async (database: Firestore, clientUuid: string, moneyPaid: number, items: exportItem[]): Promise<string> => {
+    try {
+        await getClient(database, clientUuid);
+        let totalPrice: number = 0;
+        items.forEach(async (item) => {
+            await getItem(database, item.itemUuid);
+            totalPrice += item.price * item.mass;
+        });
+        
+        const receiptUuid = await createReceipt(database, ReceiptType.EXPORT, clientUuid, totalPrice, moneyPaid);
+
+        items.forEach(async (item) => {
+            await decreaseItem(database, item.itemUuid, item.mass, item.boxes);
+            await createReceiptItem(database, receiptUuid, item.itemUuid, item.mass, item.boxes, item.price);
+        });
+
+        await updateBalance(database, clientUuid, moneyPaid - totalPrice);
+        // Omar: Update admin balance
+
+        return receiptUuid;
+    } catch (e) {
+        console.log("Error exporting items", e);
+        if(e instanceof FirebaseError) {
+            throw e
+        }
+        throw new FirebaseError(FIREBASE_ERROR);
+    }
+}
+
+export const getClientReceiptsHelper = async (database: Firestore, clientUuid: string): Promise<Map<string, Receipt>> => {
+    try {
+        await getClient(database, clientUuid);
+        
+        const receiptsRef = collection(database, "receipts");
+        const q = query(receiptsRef, where("userUuid", "==", clientUuid));
+        const querySnapshot = await getDocs(q);
+        const receipts: Map<string, Receipt> = new Map();
+        querySnapshot.docs.forEach(receipt => {
+            const {type, userUuid, balanceBefore, totalPrice, moneyPaid, createdAt, updatedAt} = receipt.data();
+            receipts.set(receipt.id, {
+                type, userUuid, balanceBefore, totalPrice, moneyPaid, createdAt, updatedAt
+            });
+        });
+        return receipts;
+    } catch (e) {
+        console.log("Error getting client receipts", e);
+        if(e instanceof FirebaseError) {
+            throw e
+        }
         throw new FirebaseError(FIREBASE_ERROR);
     }
 }

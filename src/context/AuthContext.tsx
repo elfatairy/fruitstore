@@ -1,15 +1,13 @@
 import { initializeApp } from "firebase/app";
 import {
     getAuth,
-    NextOrObserver,
     onAuthStateChanged,
     signInWithEmailAndPassword,
     signOut,
     User,
-    UserProfile,
 } from "firebase/auth";
 import { Firestore, getFirestore } from "firebase/firestore";
-import React, { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
+import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { Roles, userCredential } from "../types";
 
 const firebaseConfig = {
@@ -103,7 +101,7 @@ export const RequireAuth = ({ children, role = Roles.STORE }: {children: ReactNo
         // JOE: implement this commented code (navigating to login)
     }
 
-    if(role == Roles.ADMIN) {
+    if(role === Roles.ADMIN) {
         if(auth.user?.email !== "admin@admin.com") {
             // JOE: handle unauthorized (maybe just redirecting to login)
         }
