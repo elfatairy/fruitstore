@@ -5,9 +5,58 @@ import ProductsPage from './pages/ProductsPage';
 import ItemsPage from './pages/ItemsPage';
 import SuppliersPage from './pages/SuppliersPage';
 import ClientsPage from './pages/ClientsPage';
+import { Roles } from './types';
+import AdminPage from './pages/AdminPage';
+import LoginPage from './pages/LoginPage';
+import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import ClientPage from './pages/ClientPage';
+import SupplierPage from './pages/SupplierPage';
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <RequireAuth>Test</RequireAuth>,
+  },
+  {
+    path: "/login",
+    element: <LoginPage />,
+  },
+  {
+    path: "/clients",
+    element: <RequireAuth><ClientsPage /></RequireAuth>,
+  },
+  {
+    path: "/clients/:clientUid",
+    element: <RequireAuth><ClientPage /></RequireAuth>,
+  },
+  {
+    path: "/suppliers",
+    element: <RequireAuth><SuppliersPage /></RequireAuth>,
+  },
+  {
+    path: "/suppliers/:supplierUid",
+    element: <RequireAuth><SupplierPage /></RequireAuth>,
+  },
+  {
+    path: "/products",
+    element: <RequireAuth><ProductsPage /></RequireAuth>,
+  },
+  {
+    path: "/products/:productUid",
+    element: <RequireAuth><ItemsPage /></RequireAuth>,
+  },
+  {
+    path: "/items",
+    element: <RequireAuth><ItemsPage /></RequireAuth>,
+  },
+  {
+    path: "/admin",
+    element: <RequireAuth role={Roles.ADMIN}><AdminPage /></RequireAuth>,
+  },
+]);
 
 function App() {
-  const { signin } = useAuth();
+  const { signin, user } = useAuth();
 
   useEffect(() => {
     // console.log(auth.currentUser?.email);
@@ -20,14 +69,7 @@ function App() {
 
   return (
     <>
-      <RequireAuth>
-        <ClientsPage />
-        {/* <SuppliersPage /> */}
-        {/* <ProductsPage /> */}
-        {/* <ItemsPage /> */}
-      </RequireAuth>
-      {/* JOE: put the routes here and add this wrapper to every component requiring authorization 
-      <RequireAuth></RequireAuth> if it requires admin role add this property role={roles.ADMIN}  */}
+      <RouterProvider router={router} />
     </>
   );
 }

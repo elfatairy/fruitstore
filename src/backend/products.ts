@@ -3,15 +3,23 @@ import { addDoc, collection, doc, Firestore, getDoc, getDocs, query, Timestamp, 
 import { FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, FIREBASE_NOTFOUND_ERROR } from "../config/Constants";
 import { FirebaseError } from "../errors/FirebaseError";
 import { Item, Product } from "../types";
+import { getSupplier } from "./suppliers";
 
 export const getAllProducts = async (database: Firestore): Promise<Map<string, Product>> => {
     try {
         const querySnapshot = await getDocs(collection(database, "products"));
         const products = new Map();
+        const productsIds: string[] = [];
 
         querySnapshot.forEach((doc) => {
-            products.set(doc.id, doc.data());
+            productsIds.push(doc.id);
         });
+
+        
+        await Promise.all(productsIds.map(async (id) => {
+            const product = await getProduct(database, id);
+            products.set(id, product);
+        }));
 
         return products;
     } catch (e) {
@@ -40,6 +48,10 @@ export const getProduct = async (database: Firestore, productUuid: string): Prom
                     productUuid, supplierUuid, receiptItemUuid, mass, boxes, createdAt, updatedAt
                 });
             })
+            for(const [Uid, item] of items) {
+                const { username: supplierName } = await getSupplier(database, item.supplierUuid);
+                items.set(Uid, {...item, supplierName})
+            }
             return {
                 name, createdAt, updatedAt, items
             };

@@ -1,6 +1,12 @@
 import { Timestamp } from "firebase/firestore"
 import { EnumType } from "typescript"
 
+export enum PageType {
+    CLIENTS,
+    PRODUCTS,
+    SUPPLIERS
+}
+
 export type userCredential = {
     email: string,
     password: string
@@ -37,6 +43,7 @@ export type Product = {
 export type Item = {
     productUuid: string,
     supplierUuid: string,
+    supplierName?: string,
     receiptItemUuid: string,
     mass: number,
     boxes: number
@@ -85,4 +92,12 @@ export type ReceiptItem = {
     mass: number,
     boxes: number,
     price: number
+}
+
+export enum AnalysisPeriods {
+    DAY, 
+    WEEK, 
+    MONTH,
+    YEAR, 
+    ALL
 }

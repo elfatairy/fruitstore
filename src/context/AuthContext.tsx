@@ -9,6 +9,7 @@ import {
 import { Firestore, getFirestore } from "firebase/firestore";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { Roles, userCredential } from "../types";
+import { useNavigate } from "react-router-dom";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDUKW-AkNKBgVKty2AQHkwpWWSF-N9EXyY",
@@ -91,14 +92,20 @@ export const useAuth = (): AuthContextType => {
 
 export const RequireAuth = ({ children, role = Roles.STORE }: {children: ReactNode, role?: Roles}) => {
     let auth = useAuth();
+    const navigate = useNavigate();
     // let location = useLocation();
     // JOE: get the location (depending on the routing system)
 
     if (auth.initializing) return null;
 
     if (!auth.user) {
-        // return <Navigate to="/login" state={{ from: location }} replace />;
-        // JOE: implement this commented code (navigating to login)
+        setTimeout(() => {
+            navigate('/login');
+        }, 3000);
+
+        return <div>
+            You must log in first 
+        </div> // Omar : to make better ui
     }
 
     if(role === Roles.ADMIN) {

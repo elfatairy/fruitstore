@@ -1,12 +1,17 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext';
 import { FIREBASE_CREATING_ERROR, FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, FIREBASE_NOTFOUND_ERROR } from '../config/Constants';
 import { FirebaseError } from '../errors/FirebaseError';
 import { createProduct, getAllProducts, getProduct } from '../backend/products';
+import Layout from './Layout';
+import { Item, PageType, Product } from '../types';
+import { useNavigate } from 'react-router-dom';
 
 export default function ProductsPage() {
     const { db } = useAuth();
-
+    const [products, setProducts] = useState<Map<string, Product>>();
+    const navigate = useNavigate();
+    
     const addProduct = async (productName: string) => {
         try {
             const key = await createProduct(db!, productName);
@@ -44,7 +49,7 @@ export default function ProductsPage() {
             if (products) {
                 console.log("products");
                 console.log(products);
-                // JOE: SET THE products
+                setProducts(products);
             }
         } catch (error) {
             if (error instanceof FirebaseError) {
@@ -100,12 +105,71 @@ export default function ProductsPage() {
         }
     }
 
+    const calculateWeight = (items: Map<string, Item>) => {
+        let weight = 0;
+        items.forEach((item, key) => {
+            weight += item.mass;
+        })
+        return weight;
+    }
+    
+    const calculateBoxes = (items: Map<string, Item>) => {
+        let weight = 0;
+        items.forEach((item, key) => {
+            weight += item.boxes;
+        })
+        return weight;
+    }
+
     useEffect(() => {
-        addProduct("Apple");
+        getProducts();
+        // addProduct("Apple");
         // getProductDetails("UOtbiREpGbbKvPESQUIM");
     }, []);
 
     return (
-        <div>ProductsPage</div>
+        <Layout page={PageType.PRODUCTS}>
+            <div className='top'>
+                <h2 className='title'>Products</h2>
+                <button className='add'>
+                    <span>Add New</span>
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <g id="Edit / Add_Plus">
+                            <path id="Vector" d="M6 12H12M12 12H18M12 12V18M12 12V6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </g>
+                    </svg>
+                </button>
+            </div>
+            <div className='bottom'>
+                <div className='input-container'>
+                    <input className='search' placeholder='Search Here' />
+                    <svg className='icon' viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16.6725 16.6412L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#777" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+                {
+                    products ?
+                        <table>
+                            <tr>
+                                <th>Name</th>
+                                <th>Available Weight</th>
+                                <th>Available Boxes</th>
+                            </tr>
+                            {
+                                [...products.entries()].map(([id, product]) => {
+                                    return <tr onClick={() => navigate(`/products/${id}`)}>
+                                        <td>{product.name}</td>
+                                        <td>{product.items ? calculateWeight(product.items) : 0}</td>
+                                        <td>{product.items ? calculateBoxes(product.items) : 0}</td>
+                                    </tr>
+                                })
+                            }
+                        </table> :
+                        <div>
+                            There is no products yet, add a client to interact with him
+                        </div>
+                }
+            </div>
+        </Layout>
     )
 }

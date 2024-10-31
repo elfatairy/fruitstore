@@ -42,7 +42,7 @@ export const getReceipt = async (database: Firestore, receiptUuid: string): Prom
             const receiptsItemsRef = collection(database, "receiptsItems");
             const q = query(receiptsItemsRef, where("receiptUuid", "==", receiptUuid));
             const querySnapshot = await getDocs(q);
-            querySnapshot.docs.forEach(async (receiptItemDoc) => {
+            await Promise.all(querySnapshot.docs.map(async (receiptItemDoc) => {
                 const {itemUuid, mass, boxes, price} = receiptItemDoc.data();
                 const item = await getDoc(doc(database, "items", itemUuid));
                 if(!item.exists()) {
@@ -61,7 +61,7 @@ export const getReceipt = async (database: Firestore, receiptUuid: string): Prom
                 const {name: productName} = product.data();
                 items.push({itemUuid, supplierUuid, supplierName, productName, mass, boxes, price
                 })
-            });
+            }));
             return {
                 type, userUuid, userName, balanceBefore, totalPrice, moneyPaid, items, createdAt, updatedAt
             };

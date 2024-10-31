@@ -5,51 +5,23 @@ import { FIREBASE_CREATING_ERROR, FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, FI
 import { FirebaseError } from '../errors/FirebaseError';
 import { getReceipt } from '../backend/receipts';
 import Layout from './Layout';
-import { Client, PageType } from '../types';
-import { useNavigate } from 'react-router-dom';
+import { Client, PageType, Receipt } from '../types';
+import { NavLink, useParams } from 'react-router-dom';
 
-export default function ClientsPage() {
+export default function ClientPage() {
     const { db } = useAuth();
+    const { clientUid } = useParams();
     const [first, setFirst] = useState(true);
-    const [clients, setClients] = useState<Map<string, Client>>();
-    const navigate = useNavigate();
+    const [client, setClient] = useState<Client>();
+    const [receipts, setReceipts] = useState<Map<string, Receipt>>();
 
-    const addClient = async (clientName: string, number: string) => {
+    const getClientDetails = async (clientUuid: string) => {
         try {
-            const key = await createClient(db!, clientName, number);
-            if (key) {
-                console.log(key);
-                // JOE: Handle successul creation
-            }
-        } catch (error) {
-            console.log("ERROR");
-            if (error instanceof FirebaseError) {
-                if (error.code === FIREBASE_ERROR) {
-                    /* showMessage({
-                        message: 'Success',
-                        description: 'حدث خطأ ما , برجاء المحاولة مرة أخري لاحقا ',
-                        type: 'success',
-                        duration: 3000,
-                        floating: true,
-                        autoHide: true,
-                    }); */
-                    // JOE: add this feature
-                } else {
-                    console.error('An error occurred with code:', error.code);
-                }
-            } else {
-                console.error('An unexpected error occurred:', error);
-            }
-        }
-    }
-
-    const getClients = async () => {
-        try {
-            const clients = await getAllClients(db!);
-            if (clients) {
-                console.log("clients");
-                console.log(clients);
-                setClients(clients);
+            const client = await getClient(db!, clientUuid);
+            if (client) {
+                console.log("client");
+                console.log(client);
+                setClient(client);
             }
         } catch (error) {
             if (error instanceof FirebaseError) {
@@ -64,6 +36,40 @@ export default function ClientsPage() {
                         floating: true,
                         autoHide: true,
                     }); */
+                } else if (error.code === FIREBASE_NOTFOUND_ERROR) {
+                    // JOE
+                } else {
+                    console.error('An error occurred with code:', error.code);
+                }
+            } else {
+                console.error('An unexpected error occurred:', error);
+            }
+        }
+    }
+
+    const getClientReceipts = async (clientUuid: string) => {
+        try {
+            const receipts = await getClientReceiptsHelper(db!, clientUuid);
+            if (receipts) {
+                console.log("receipts");
+                console.log(receipts);
+                setReceipts(receipts);
+            }
+        } catch (error) {
+            if (error instanceof FirebaseError) {
+                if (error.code === FIREBASE_ERROR) {
+                    console.log("ERROR");
+                    // JOE: FIX this
+                    /* showMessage({
+                        message: 'Success',
+                        description: 'حدث خطأ ما , برجاء المحاولة مرة أخري لاحقا ',
+                        type: 'success',
+                        duration: 3000,
+                        floating: true,
+                        autoHide: true,
+                    }); */
+                } else if (error.code === FIREBASE_NOTFOUND_ERROR) {
+                    // JOE
                 } else {
                     console.error('An error occurred with code:', error.code);
                 }
@@ -140,17 +146,17 @@ export default function ClientsPage() {
     }
 
     useEffect(() => {
-        // addClient("Ahmed", "01021853989");
-        getClients();
-        // getClientDetails("t3Djn4ODbjMoBEzfwTz7");
+        if (clientUid) {
+            getClientDetails(clientUid);
+            getClientReceipts(clientUid);
+        }
 
         if (first) {
             setFirst(false);
-            // getClientReceipts("Qu2rJVh5vyDxUapqd4iK");
             // getReceiptDetails("qiq3adDDVBBsvHLN9dyk");
             // exportItems("Qu2rJVh5vyDxUapqd4iK", 100, [
             //     {
-            //         itemUuid: "mdSLcKJqmP54Iv8xH1mN",
+            //         itemUuid: "Zx1SqeVgqxBOOQjsI0Y6",
             //         mass: 5,
             //         boxes: 1,
             //         price: 20
@@ -159,16 +165,22 @@ export default function ClientsPage() {
         }
     }, []);
 
+    if (!client) {
+        return <div>
+            Loading....
+        </div>
+    }
+
     return (
         <Layout page={PageType.CLIENTS}>
             <div className='top'>
-                <h2 className='title'>Clients</h2>
+                <h2 className='title'><NavLink className="link" to="/clients">Clients</NavLink> / {client.username}</h2>
                 <button className='add'>
-                    <span>Add New</span>
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <g id="Edit / Add_Plus">
-                            <path id="Vector" d="M6 12H12M12 12H18M12 12V18M12 12V6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                        </g>
+                    <span>Export</span>
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none">
+                        <path d="M9.31995 6.49994L11.8799 3.93994L14.4399 6.49994" stroke="#fff" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M11.88 14.18V4.01001" stroke="#fff" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M4 12C4 16.42 7 20 12 20C17 20 20 16.42 20 12" stroke="#fff" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 </button>
             </div>
@@ -180,25 +192,27 @@ export default function ClientsPage() {
                     </svg>
                 </div>
                 {
-                    clients ?
+                    receipts ?
                         <table>
                             <tr>
-                                <th>Name</th>
-                                <th>Number</th>
-                                <th>Balance</th>
+                                <th>Receipt Number</th>
+                                <th>Receipt Date</th>
+                                <th>Total Price</th>
+                                <th>Money Paid</th>
                             </tr>
                             {
-                                [...clients.entries()].map(([id, client]) => {
-                                    return <tr onClick={() => navigate(`/clients/${id}`)}>
-                                        <td>{client.username}</td>
-                                        <td>{client.number}</td>
-                                        <td>{client.balance}</td>
+                                [...receipts.entries()].map(([id, receipt]) => {
+                                    return <tr>
+                                        <td>{id}</td>
+                                        <td>{receipt.createdAt.toDate().toUTCString()}</td>
+                                        <td>{receipt.totalPrice}</td>
+                                        <td>{receipt.moneyPaid}</td>
                                     </tr>
                                 })
                             }
                         </table> :
                         <div>
-                            There is no clients yet, add a client to interact with him
+                            There is no receipts yet, add a client to interact with him
                         </div>
                 }
             </div>

@@ -6,6 +6,7 @@ import { Client, Receipt, ReceiptType } from "../types";
 import { getProduct } from "./products";
 import { createReceipt, createReceiptItem } from "./receipts";
 import { createItem, decreaseItem, getItem } from "./items";
+import { updateAdminBalance } from "./admin";
 
 export const getAllClients = async (database: Firestore): Promise<Map<string, Client>> => {
     try {
@@ -108,20 +109,20 @@ export const exportItemsHelper = async (database: Firestore, clientUuid: string,
     try {
         await getClient(database, clientUuid);
         let totalPrice: number = 0;
-        items.forEach(async (item) => {
+        await Promise.all(items.map(async (item) => {
             await getItem(database, item.itemUuid);
             totalPrice += item.price * item.mass;
-        });
+        }));
         
         const receiptUuid = await createReceipt(database, ReceiptType.EXPORT, clientUuid, totalPrice, moneyPaid);
 
-        items.forEach(async (item) => {
+        await Promise.all(items.map(async (item) => {
             await decreaseItem(database, item.itemUuid, item.mass, item.boxes);
             await createReceiptItem(database, receiptUuid, item.itemUuid, item.mass, item.boxes, item.price);
-        });
+        }));
 
         await updateBalance(database, clientUuid, moneyPaid - totalPrice);
-        // Omar: Update admin balance
+        await updateAdminBalance(database, moneyPaid);
 
         return receiptUuid;
     } catch (e) {

@@ -5,51 +5,25 @@ import { FIREBASE_CREATING_ERROR, FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, FI
 import { FirebaseError } from '../errors/FirebaseError';
 import { getReceipt } from '../backend/receipts';
 import Layout from './Layout';
-import { Client, PageType } from '../types';
-import { useNavigate } from 'react-router-dom';
+import { Client, PageType, Receipt, Supplier } from '../types';
+import { NavLink, useParams } from 'react-router-dom';
+import { getSupplier, getSupplierReceiptsHelper } from '../backend/suppliers';
 
-export default function ClientsPage() {
+export default function SupplierPage() {
     const { db } = useAuth();
+    const { supplierUid } = useParams();
     const [first, setFirst] = useState(true);
-    const [clients, setClients] = useState<Map<string, Client>>();
-    const navigate = useNavigate();
+    const [supplier, setSupplier] = useState<Supplier>();
+    const [receipts, setReceipts] = useState<Map<string, Receipt>>();
 
-    const addClient = async (clientName: string, number: string) => {
-        try {
-            const key = await createClient(db!, clientName, number);
-            if (key) {
-                console.log(key);
-                // JOE: Handle successul creation
-            }
-        } catch (error) {
-            console.log("ERROR");
-            if (error instanceof FirebaseError) {
-                if (error.code === FIREBASE_ERROR) {
-                    /* showMessage({
-                        message: 'Success',
-                        description: 'حدث خطأ ما , برجاء المحاولة مرة أخري لاحقا ',
-                        type: 'success',
-                        duration: 3000,
-                        floating: true,
-                        autoHide: true,
-                    }); */
-                    // JOE: add this feature
-                } else {
-                    console.error('An error occurred with code:', error.code);
-                }
-            } else {
-                console.error('An unexpected error occurred:', error);
-            }
-        }
-    }
 
-    const getClients = async () => {
+    const getSupplierDetails = async (supplierUuid: string) => {
         try {
-            const clients = await getAllClients(db!);
-            if (clients) {
-                console.log("clients");
-                console.log(clients);
-                setClients(clients);
+            const supplier = await getSupplier(db!, supplierUuid);
+            if (supplier) {
+                console.log("supplier");
+                console.log(supplier);
+                setSupplier(supplier)
             }
         } catch (error) {
             if (error instanceof FirebaseError) {
@@ -64,6 +38,40 @@ export default function ClientsPage() {
                         floating: true,
                         autoHide: true,
                     }); */
+                } else if (error.code === FIREBASE_NOTFOUND_ERROR) {
+                    // JOE
+                } else {
+                    console.error('An error occurred with code:', error.code);
+                }
+            } else {
+                console.error('An unexpected error occurred:', error);
+            }
+        }
+    }
+
+    const getSupplierReceipts = async (supplierUuid: string) => {
+        try {
+            const receipts = await getSupplierReceiptsHelper(db!, supplierUuid);
+            if (receipts) {
+                console.log("receipts");
+                console.log(receipts);
+                setReceipts(receipts);
+            }
+        } catch (error) {
+            if (error instanceof FirebaseError) {
+                if (error.code === FIREBASE_ERROR) {
+                    console.log("ERROR");
+                    // JOE: FIX this
+                    /* showMessage({
+                        message: 'Success',
+                        description: 'حدث خطأ ما , برجاء المحاولة مرة أخري لاحقا ',
+                        type: 'success',
+                        duration: 3000,
+                        floating: true,
+                        autoHide: true,
+                    }); */
+                } else if (error.code === FIREBASE_NOTFOUND_ERROR) {
+                    // JOE
                 } else {
                     console.error('An error occurred with code:', error.code);
                 }
@@ -140,17 +148,17 @@ export default function ClientsPage() {
     }
 
     useEffect(() => {
-        // addClient("Ahmed", "01021853989");
-        getClients();
-        // getClientDetails("t3Djn4ODbjMoBEzfwTz7");
+        if (supplierUid) {
+            getSupplierDetails(supplierUid);
+            getSupplierReceipts(supplierUid);
+        }
 
         if (first) {
             setFirst(false);
-            // getClientReceipts("Qu2rJVh5vyDxUapqd4iK");
             // getReceiptDetails("qiq3adDDVBBsvHLN9dyk");
             // exportItems("Qu2rJVh5vyDxUapqd4iK", 100, [
             //     {
-            //         itemUuid: "mdSLcKJqmP54Iv8xH1mN",
+            //         itemUuid: "Zx1SqeVgqxBOOQjsI0Y6",
             //         mass: 5,
             //         boxes: 1,
             //         price: 20
@@ -159,16 +167,21 @@ export default function ClientsPage() {
         }
     }, []);
 
+    if (!supplier) {
+        return <div>
+            Loading....
+        </div>
+    }
+
     return (
-        <Layout page={PageType.CLIENTS}>
+        <Layout page={PageType.SUPPLIERS}>
             <div className='top'>
-                <h2 className='title'>Clients</h2>
+                <h2 className='title'><NavLink className="link" to="/suppliers">Suppliers</NavLink> / {supplier.username}</h2>
                 <button className='add'>
-                    <span>Add New</span>
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <g id="Edit / Add_Plus">
-                            <path id="Vector" d="M6 12H12M12 12H18M12 12V18M12 12V6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                        </g>
+                    <span>Import</span>
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M4 12C4 16.4183 7.58172 20 12 20C16.4183 20 20 16.4183 20 12" stroke="#fff" stroke-width="1.5" stroke-linecap="round" />
+                        <path d="M12 4L12 14M12 14L15 11M12 14L9 11" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                 </button>
             </div>
@@ -180,25 +193,27 @@ export default function ClientsPage() {
                     </svg>
                 </div>
                 {
-                    clients ?
+                    receipts ?
                         <table>
                             <tr>
-                                <th>Name</th>
-                                <th>Number</th>
-                                <th>Balance</th>
+                                <th>Receipt Number</th>
+                                <th>Receipt Date</th>
+                                <th>Total Price</th>
+                                <th>Money Paid</th>
                             </tr>
                             {
-                                [...clients.entries()].map(([id, client]) => {
-                                    return <tr onClick={() => navigate(`/clients/${id}`)}>
-                                        <td>{client.username}</td>
-                                        <td>{client.number}</td>
-                                        <td>{client.balance}</td>
+                                [...receipts.entries()].map(([id, receipt]) => {
+                                    return <tr>
+                                        <td>{id}</td>
+                                        <td>{receipt.createdAt.toDate().toUTCString()}</td>
+                                        <td>{receipt.totalPrice}</td>
+                                        <td>{receipt.moneyPaid}</td>
                                     </tr>
                                 })
                             }
                         </table> :
                         <div>
-                            There is no clients yet, add a client to interact with him
+                            There is no receipts yet, add a client to interact with him
                         </div>
                 }
             </div>
