@@ -18,6 +18,7 @@
   background-color: #f0f0f0;
   display: flex;
   flex-direction: column;
+  /* overflow: hidden; */
 }
 
 .layout header {
@@ -58,6 +59,7 @@
 .layout .body {
   display: flex;
   flex: 1;
+  overflow-y: hidden;
 }
 
 .layout aside {
@@ -127,12 +129,14 @@
   width: 20px;
   height: 20px;
   transition: all 0.2s ease-in-out;
-  fill: #bbb
+  fill: #bbb;
+  stroke: #bbb
 }
 
 .layout aside ul li.active svg,
 .layout aside ul li:hover svg {
-  fill: #000
+  fill: #000;
+  stroke: #000
 }
 
 .layout .contents {
@@ -140,6 +144,9 @@
   padding: 15px 40px;
   border-radius: 15px 0 0 0;
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: hidden;
 }
 
 
@@ -249,6 +256,9 @@
 
 /*** CONTENT */
 
+.layout .contents {
+  height: 100%;
+}
 .layout .contents .top {
   display: flex;
   justify-content: space-between;
@@ -264,17 +274,55 @@
   text-decoration: underline;
 }
 
-.layout .contents .top .add {
+.layout .contents .top .right-data {
+  display: flex;
+  gap: 20px;
+  flex-direction: row;
+  align-items: center;
+}
+
+.layout .contents .top .btns {
+  display: flex;
+  flex-direction: row;
+  gap: 5px;
+}
+
+.layout .contents .top .btn {
   border-radius: 20px;
   color: #fff;
   display: flex;
   gap: 5px;
-  background-color: #2980b9;
   border: none;
   outline: none;
   padding: 0 10px;
   height: fit-content;
   align-items: center;
+  cursor: pointer;
+  transition: all 0.5s ease-in-out
+}
+
+.layout .contents .top .btn.add {
+  background-color: #2980b9;
+}
+
+.layout .contents .top .btn.pay {
+  background-color: #f39c12;
+}
+
+.layout .contents .top .btn.receipt {
+  background-color: #27ae60;
+}
+
+.layout .contents .top .btn.add:hover {
+  background-color: #096099;
+}
+
+.layout .contents .top .btn.pay:hover {
+  background-color: #d37c00;
+}
+
+.layout .contents .top .btn.receipt:hover {
+  background-color: #078e40;
 }
 
 .layout .contents .top .badges {
@@ -296,11 +344,11 @@
   background-color: #8e44ad;
 }
 
-.layout .contents .top .add span {
+.layout .contents .top .btn span {
   width: 100%;
 }
 
-.layout .contents .top .add svg {
+.layout .contents .top .btn svg {
   width: 40px;
   height: 40px;
 }
@@ -311,7 +359,15 @@
   border-radius: 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px
+  gap: 20px;
+  flex: 1;
+  overflow-y: hidden;
+}
+.layout .contents .bottom .bottom-contnet {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px
 }
 
 .layout .contents .bottom .input-container {
@@ -343,7 +399,7 @@
   border-collapse: collapse;
 }
 
-.layout .contents .bottom table tr:first-of-type {
+.layout .contents .bottom table thead tr {
   border-radius: 20px;
   background-color: #f0f0f0;
 }
@@ -362,19 +418,25 @@
   padding: 14px 7px 14px 14px;
   font-size: 0.9rem;
   transition: all 0.2s ease-in-out;
+  
 }
 
-.layout .contents .bottom table tr td.supplierUid {
+.layout .contents .bottom table tr td .td-contents {
+  display: flex;
+  align-items: center;
+}
+
+.layout .contents .bottom table tr td.table-link {
   cursor: pointer;
   color: #2980b9;
 }
 
-.layout .contents .bottom table tr td.supplierUid:hover {
+.layout .contents .bottom table tr td.table-link:hover {
   text-decoration: underline;
   background-color: #f0f0f0;
 }
 
-.layout .contents .bottom table tr:not(.nohover):not(:first-of-type) {
+.layout .contents .bottom table tr:not(.nohover) {
   transition: all 0.2s ease-in-out;
   cursor: pointer;
 }
@@ -383,6 +445,6 @@
   border-bottom: 2px solid #f0f0f0;
 }
 
-.layout .contents .bottom table tr:not(.nohover):not(:first-of-type):hover {
+.layout .contents .bottom table tr:not(.nohover):hover {
   background-color: #f0f0f0;
 }

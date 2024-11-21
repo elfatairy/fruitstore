@@ -2,9 +2,11 @@ import { addDoc, collection, doc, Firestore, getDoc, getDocs, query, Timestamp, 
 // import { attemptFirebasePush } from "./firebase";
 import { FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, FIREBASE_NOTFOUND_ERROR } from "../config/Constants";
 import { FirebaseError } from "../errors/FirebaseError";
-import { FullReceipt, FullReceiptItem, Item, Product, Receipt, ReceiptType } from "../types";
+import { ClientItem, FullReceipt, Item, Product, Receipt, ReceiptType, VaultRec } from "../utils/types";
 import { getSupplier } from "./suppliers";
 import { getClient } from "./clients";
+import { getClientItem, getItem } from "./items";
+import { getVaultRec } from "./vault";
 
 export const getAllReceipts = async (database: Firestore): Promise<Map<string, Receipt>> => {
     try {
@@ -18,7 +20,7 @@ export const getAllReceipts = async (database: Firestore): Promise<Map<string, R
         return receipts;
     } catch (e) {
         console.log("Error getting all receipts", e);
-        if(e instanceof FirebaseError) {
+        if (e instanceof FirebaseError) {
             throw e
         }
         throw new FirebaseError(FIREBASE_ERROR);
@@ -29,67 +31,79 @@ export const getReceipt = async (database: Firestore, receiptUuid: string): Prom
     try {
         const docRef = doc(database, "receipts", receiptUuid);
         const docSnap = await getDoc(docRef);
-        
+
         if (docSnap.exists()) {
-            const {type, userUuid, balanceBefore, totalPrice, moneyPaid, createdAt, updatedAt} = docSnap.data();
+            const { type, userUuid, balanceBefore, totalPrice, moneyPaid, itemsObject, vaultRecsObject, createdAt, updatedAt } = docSnap.data();
             let userName = "";
-            if(type == ReceiptType.IMPORT) {
+            const items: Item[] = [];
+            const clientItems: ClientItem[] = [];
+
+            if (type == ReceiptType.IMPORT) {
                 userName = (await getSupplier(database, userUuid)).username;
+                await Promise.all(Object.entries(itemsObject).map(async ([itemUuid, _]) => {
+                    items.push(await getItem(database, itemUuid));
+                }))
             } else if (type == ReceiptType.EXPORT) {
                 userName = (await getClient(database, userUuid)).username;
+                await Promise.all(Object.entries(itemsObject).map(async ([itemUuid, _]) => {
+                    clientItems.push(await getClientItem(database, itemUuid));
+                }));
             }
-            const items: FullReceiptItem[] = [];
-            const receiptsItemsRef = collection(database, "receiptsItems");
-            const q = query(receiptsItemsRef, where("receiptUuid", "==", receiptUuid));
-            const querySnapshot = await getDocs(q);
-            await Promise.all(querySnapshot.docs.map(async (receiptItemDoc) => {
-                const {itemUuid, mass, boxes, price} = receiptItemDoc.data();
-                const item = await getDoc(doc(database, "items", itemUuid));
-                if(!item.exists()) {
-                    throw new FirebaseError(FIREBASE_ERROR);
-                }
-                const {supplierUuid, productUuid} = item.data();
-                const supplier = await getDoc(doc(database, "suppliers", supplierUuid));
-                if(!supplier.exists()) {
-                    throw new FirebaseError(FIREBASE_ERROR);
-                }
-                const {username: supplierName} = supplier.data();
-                const product = await getDoc(doc(database, "products", productUuid));
-                if(!product.exists()) {
-                    throw new FirebaseError(FIREBASE_ERROR);
-                }
-                const {name: productName} = product.data();
-                items.push({itemUuid, supplierUuid, supplierName, productName, mass, boxes, price
-                })
+
+            const vaultRecs: VaultRec[] = [];
+            await Promise.all(Object.entries(vaultRecsObject).map(async ([recUuid, _]) => {
+                vaultRecs.push(await getVaultRec(database, recUuid));
             }));
-            return {
-                type, userUuid, userName, balanceBefore, totalPrice, moneyPaid, items, createdAt, updatedAt
-            };
+
+            if (type == ReceiptType.IMPORT) {
+                return {
+                    type, userUuid, userName, balanceBefore, totalPrice, moneyPaid, items, vaultRecs, createdAt, updatedAt, itemsObject, vaultRecsObject
+                };
+            } else if (type == ReceiptType.EXPORT) {
+                return {
+                    type, userUuid, userName, balanceBefore, totalPrice, moneyPaid, items: clientItems, vaultRecs, createdAt, updatedAt, itemsObject, vaultRecsObject
+                };
+            }
+
+            throw new Error("Not valid receipt type");
+
         } else {
             throw new FirebaseError(FIREBASE_NOTFOUND_ERROR);
         }
     } catch (e) {
         console.log("Error getting a receipt", e);
-        if(e instanceof FirebaseError) {
+        if (e instanceof FirebaseError) {
             throw e
         }
         throw new FirebaseError(FIREBASE_ERROR);
     }
 }
 
-export const createReceipt = async (database: Firestore, 
+export const createReceipt = async (database: Firestore,
     type: ReceiptType,
     userUuid: string,
     totalPrice: number,
-    moneyPaid: number
+    moneyPaid: number,
+    items: string[],
+    vaultRecs: string[]
 ): Promise<string> => {
     try {
         let balanceBefore = 0;
-        if(type === ReceiptType.IMPORT) {
+        if (type === ReceiptType.IMPORT) {
             balanceBefore = (await getSupplier(database, userUuid)).balance;
         } else if (type == ReceiptType.EXPORT) {
             balanceBefore = (await getClient(database, userUuid)).balance;
         }
+
+        let itemsObject: Record<string, boolean> = {};
+        items.forEach(item => {
+            itemsObject[item] = true;
+        });
+
+        let vaultRecsObject: Record<string, boolean> = {};
+        vaultRecs.forEach(rec => {
+            vaultRecsObject[rec] = true;
+        });
 
         const docRef = await addDoc(collection(database, 'receipts'), {
             type,
@@ -97,6 +111,8 @@ export const createReceipt = async (database: Firestore,
             balanceBefore,
             totalPrice,
             moneyPaid,
+            itemsObject,
+            vaultRecsObject,
             createdAt: Timestamp.now(),
             updatedAt: Timestamp.now()
         });
@@ -108,37 +124,7 @@ export const createReceipt = async (database: Firestore,
         }
     } catch (e) {
         console.log("Error adding a receipt", e);
-        if(e instanceof FirebaseError) {
-            throw e
-        }
-        throw new FirebaseError(FIREBASE_ERROR);
-    }
-}
-
-export const createReceiptItem = async (database: Firestore, 
-    receiptUuid: string,
-    itemUuid: string, 
-    mass: number, 
-    boxes: number,
-    price: number,
-): Promise<string> => {
-    try {
-        const docRef = await addDoc(collection(database, 'receiptsItems'), {
-            receiptUuid,
-            itemUuid,
-            mass,
-            boxes,
-            price
-        });
-
-        if (docRef.id) {
-            return docRef.id;
-        } else {
-            throw new FirebaseError(FIREBASE_ERROR);
-        }
-    } catch (e) {
-        console.log("Error creating receipt items", e);
-        if(e instanceof FirebaseError) {
+        if (e instanceof FirebaseError) {
             throw e
         }
         throw new FirebaseError(FIREBASE_ERROR);

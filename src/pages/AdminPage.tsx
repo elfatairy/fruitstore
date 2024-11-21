@@ -2,9 +2,8 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext';
 import { FIREBASE_CREATING_ERROR, FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, FIREBASE_NOT_ENOUGH_ERROR, FIREBASE_NOTFOUND_ERROR } from '../config/Constants';
 import { FirebaseError } from '../errors/FirebaseError';
-import { createSupplier, getAllSuppliers, getSupplier, getSupplierReceiptsHelper, importItem, importItemsHelper } from '../backend/suppliers';
 import { getCostsAnalysisHelper, getProfitsAnalysisHelper, getReceiptsAnalysisHelper, getSellingAnalysisHelper } from '../backend/admin';
-import { AnalysisPeriods } from '../types';
+import { AnalysisPeriods } from '../utils/types';
 
 export default function AdminPage() {
     const { db } = useAuth();

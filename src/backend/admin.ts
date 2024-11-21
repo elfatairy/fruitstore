@@ -1,7 +1,7 @@
 import { collection, doc, Firestore, getDoc, getDocs, query, Timestamp, updateDoc, where } from "firebase/firestore";
 import { FirebaseError } from "../errors/FirebaseError";
 import { FIREBASE_ERROR } from "../config/Constants";
-import { AnalysisPeriods, ReceiptType } from "../types";
+import { AnalysisPeriods, ReceiptType } from "../utils/types";
 
 export const updateAdminBalance = async (database: Firestore, amount: number): Promise<number> => {
     try {

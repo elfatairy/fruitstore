@@ -8,7 +8,7 @@ import {
 } from "firebase/auth";
 import { Firestore, getFirestore } from "firebase/firestore";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
-import { Roles, userCredential } from "../types";
+import { Roles, userCredential } from "../utils/types";
 import { useNavigate } from "react-router-dom";
 
 const firebaseConfig = {
@@ -28,7 +28,7 @@ const db = getFirestore(app);
 type AuthContextType = {
     initializing: Boolean,
     user: User | null,
-    signin: (newUser: userCredential, successCallback?: () => void, errorCallback?: (msg: string) => void) => void,
+    signin:  (newUser: userCredential, successCallback?: () => void, errorCallback?: (msg: string) => void) => Promise<void>,
     signout: (callback: () => void) => void,
     db: Firestore
 }
@@ -88,33 +88,4 @@ export const useAuth = (): AuthContextType => {
         throw new Error('useAuth must be used within a AuthContext');
     }
     return context;
-}
-
-export const RequireAuth = ({ children, role = Roles.STORE }: {children: ReactNode, role?: Roles}) => {
-    let auth = useAuth();
-    const navigate = useNavigate();
-    // let location = useLocation();
-    // JOE: get the location (depending on the routing system)
-
-    if (auth.initializing) return null;
-
-    if (!auth.user) {
-        setTimeout(() => {
-            navigate('/login');
-        }, 3000);
-
-        return <div>
-            You must log in first 
-        </div> // Omar : to make better ui
-    }
-
-    if(role === Roles.ADMIN) {
-        if(auth.user?.email !== "admin@admin.com") {
-            // JOE: handle unauthorized (maybe just redirecting to login)
-        }
-    }
-
-    return <>
-        {children}
-    </>;
 }

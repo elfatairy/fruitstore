@@ -2,7 +2,7 @@ import { addDoc, collection, doc, Firestore, getDoc, getDocs, query, Timestamp, 
 // import { attemptFirebasePush } from "./firebase";
 import { FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, FIREBASE_NOT_ENOUGH_ERROR, FIREBASE_NOTFOUND_ERROR } from "../config/Constants";
 import { FirebaseError } from "../errors/FirebaseError";
-import { Item, Product } from "../types";
+import { ClientItem, Item, Product } from "../utils/types";
 
 export const getAllItems = async (database: Firestore): Promise<Map<string, Item>> => {
     try {
@@ -29,9 +29,31 @@ export const getItem = async (database: Firestore, itemUuid: string): Promise<It
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
-            const {productUuid, supplierUuid, receiptItemUuid, mass, boxes, createdAt, updatedAt} = docSnap.data();
+            const {productUuid, supplierUuid, receiptItemUuid, mass, boxes, price, createdAt, updatedAt} = docSnap.data();
             return {
-                productUuid, supplierUuid, receiptItemUuid, mass, boxes, createdAt, updatedAt
+                productUuid, supplierUuid, receiptItemUuid, mass, boxes, createdAt, updatedAt, price
+            };
+        } else {
+            throw new FirebaseError(FIREBASE_NOTFOUND_ERROR);
+        }
+    } catch (e) {
+        console.log("Error getting an item", e);
+        if(e instanceof FirebaseError) {
+            throw e
+        }
+        throw new FirebaseError(FIREBASE_ERROR);
+    }
+}
+
+export const getClientItem = async (database: Firestore, clientItemUuid: string): Promise<ClientItem> => {
+    try {
+        const docRef = doc(database, "clientItems", clientItemUuid);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+            const {itemUuid, clientUuid, receiptItemUuid, mass, boxes, price, createdAt, updatedAt} = docSnap.data();
+            return {
+                itemUuid, clientUuid, receiptItemUuid, mass, boxes, createdAt, updatedAt, price
             };
         } else {
             throw new FirebaseError(FIREBASE_NOTFOUND_ERROR);
@@ -50,16 +72,17 @@ export const createItem = async (database: Firestore,
     supplierUuid: string, 
     receiptItemUuid: string,
     mass: number, 
-    boxes: number
+    boxes: number,
+    price: number
 ): Promise<string> => {
     try {
-
         const docRef = await addDoc(collection(database, 'items'), {
             receiptItemUuid,
             productUuid,
             supplierUuid,
             mass,
             boxes,
+            price,
             createdAt: Timestamp.now(),
             updatedAt: Timestamp.now()
         });
@@ -86,9 +109,9 @@ export const decreaseItem = async (database: Firestore,
     try {
         const item = await getItem(database, itemUuid);
         const itemRef = doc(database, "items", itemUuid);
-        if(decreasedMass > item.mass || decreasedBoxes > item.boxes) {
-            throw new FirebaseError(FIREBASE_NOT_ENOUGH_ERROR);
-        }
+        // if(decreasedMass > item.mass || decreasedBoxes > item.boxes) {
+        //     throw new FirebaseError(FIREBASE_NOT_ENOUGH_ERROR);
+        // }
         await updateDoc(itemRef, {
             mass: item.mass - decreasedMass,
             boxes: item.boxes - decreasedBoxes

@@ -2,11 +2,12 @@ import { addDoc, collection, doc, Firestore, getDoc, getDocs, query, Timestamp, 
 // import { attemptFirebasePush } from "./firebase";
 import { FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, FIREBASE_NOTFOUND_ERROR } from "../config/Constants";
 import { FirebaseError } from "../errors/FirebaseError";
-import { Receipt, ReceiptType, Supplier } from "../types";
+import { ExtendedItem, Item, Receipt, ReceiptType, Supplier, VaultRec } from "../utils/types";
 import { getProduct } from "./products";
-import { createItem } from "./items";
-import { createReceipt, createReceiptItem } from "./receipts";
+import { createItem, getItem } from "./items";
+import { createReceipt } from "./receipts";
 import { updateAdminBalance } from "./admin";
+import { getVaultRec } from "./vault";
 
 export const getAllSuppliers = async (database: Firestore): Promise<Map<string, Supplier>> => {
     try {
@@ -20,7 +21,7 @@ export const getAllSuppliers = async (database: Firestore): Promise<Map<string, 
         return suppliers;
     } catch (e) {
         console.log("Error getting all suppliers", e);
-        if(e instanceof FirebaseError) {
+        if (e instanceof FirebaseError) {
             throw e
         }
         throw new FirebaseError(FIREBASE_ERROR);
@@ -31,9 +32,9 @@ export const getSupplier = async (database: Firestore, supplierUuid: string): Pr
     try {
         const docRef = doc(database, "suppliers", supplierUuid);
         const docSnap = await getDoc(docRef);
-        
+
         if (docSnap.exists()) {
-            const {username, number, balance, createdAt, updatedAt} = docSnap.data();
+            const { username, number, balance, createdAt, updatedAt } = docSnap.data();
             return {
                 username, number, balance, createdAt, updatedAt
             };
@@ -42,7 +43,7 @@ export const getSupplier = async (database: Firestore, supplierUuid: string): Pr
         }
     } catch (e) {
         console.log("Error getting a supplier", e);
-        if(e instanceof FirebaseError) {
+        if (e instanceof FirebaseError) {
             throw e
         }
         throw new FirebaseError(FIREBASE_ERROR);
@@ -73,7 +74,7 @@ export const createSupplier = async (database: Firestore, username: string, numb
         }
     } catch (e) {
         console.log("Error adding supplier", e);
-        if(e instanceof FirebaseError) {
+        if (e instanceof FirebaseError) {
             throw e
         }
         throw new FirebaseError(FIREBASE_ERROR);
@@ -86,13 +87,13 @@ export const updateBalance = async (database: Firestore, supplierUuid: string, a
         const newBalance = (await getDoc(supplierRef)).data()!.balance + amount;
         updateDoc(supplierRef, {
             balance: newBalance,
-            updatedAt: Timestamp.now() 
+            updatedAt: Timestamp.now()
         });
 
         return newBalance;
     } catch (e) {
         console.log("Error updating balance", e);
-        if(e instanceof FirebaseError) {
+        if (e instanceof FirebaseError) {
             throw e
         }
         throw new FirebaseError(FIREBASE_ERROR);
@@ -100,34 +101,50 @@ export const updateBalance = async (database: Firestore, supplierUuid: string, a
 }
 
 export type importItem = {
-    productUuid: string, 
-    mass: number, 
+    productUuid: string,
+    mass: number,
     boxes: number,
     price: number
 }
-export const importItemsHelper = async (database: Firestore, supplierUuid: string, moneyPaid: number, items: importItem[]): Promise<string> => {
+
+export const importItemHelper = async (database: Firestore, supplierUuid: string, item: importItem) => {
     try {
         await getSupplier(database, supplierUuid);
-        let totalPrice: number = 0;
-        await Promise.all(items.map(async (item) => {
-            await getProduct(database, item.productUuid);
+        await getProduct(database, item.productUuid);
+
+        const itemUuid = createItem(database, item.productUuid, supplierUuid, "", item.mass, item.boxes, item.price);
+        return itemUuid;
+    } catch (e) {
+        console.log("Error importing items", e);
+        if (e instanceof FirebaseError) {
+            throw e
+        }
+        throw new FirebaseError(FIREBASE_ERROR);
+    }
+}
+
+export const createSupplierReceipt = async (database: Firestore, supplierUuid: string, items: string[], vaultRecs: string[]) : Promise<string> => {
+    try {
+        await getSupplier(database, supplierUuid);
+
+        let totalPrice = 0;
+        await Promise.all(items.map(async (itemUuid) => {
+            const item = await getItem(database, itemUuid);
             totalPrice += item.price * item.mass;
         }));
         
-        const receiptUuid = await createReceipt(database, ReceiptType.IMPORT, supplierUuid, totalPrice, moneyPaid);
-
-        await Promise.all(items.map(async (item) => {
-            const itemUuid = await createItem(database, item.productUuid, supplierUuid, receiptUuid, item.mass, item.boxes);
-            await createReceiptItem(database, receiptUuid, itemUuid, item.mass, item.boxes, item.price);
+        let totalMoney = 0;
+        await Promise.all(vaultRecs.map(async (recUuid) => {
+            const rec = await getVaultRec(database, recUuid);
+            totalMoney += rec.amount;
         }));
-
-        await updateBalance(database, supplierUuid, totalPrice - moneyPaid);
-        await updateAdminBalance(database, -moneyPaid);
+        
+        const receiptUuid = await createReceipt(database, ReceiptType.IMPORT, supplierUuid, totalPrice, totalMoney, items, vaultRecs);
 
         return receiptUuid;
     } catch (e) {
         console.log("Error importing items", e);
-        if(e instanceof FirebaseError) {
+        if (e instanceof FirebaseError) {
             throw e
         }
         throw new FirebaseError(FIREBASE_ERROR);
@@ -137,21 +154,71 @@ export const importItemsHelper = async (database: Firestore, supplierUuid: strin
 export const getSupplierReceiptsHelper = async (database: Firestore, supplierUuid: string): Promise<Map<string, Receipt>> => {
     try {
         await getSupplier(database, supplierUuid);
-        
+
         const receiptsRef = collection(database, "receipts");
         const q = query(receiptsRef, where("userUuid", "==", supplierUuid));
         const querySnapshot = await getDocs(q);
         const receipts: Map<string, Receipt> = new Map();
         querySnapshot.docs.forEach(receipt => {
-            const {type, userUuid, balanceBefore, totalPrice, moneyPaid, createdAt, updatedAt} = receipt.data();
+            const { type, userUuid, balanceBefore, totalPrice, moneyPaid, createdAt, updatedAt, itemsObject, vaultRecsObject } = receipt.data();
             receipts.set(receipt.id, {
-                type, userUuid, balanceBefore, totalPrice, moneyPaid, createdAt, updatedAt
+                type, userUuid, balanceBefore, totalPrice, moneyPaid, createdAt, updatedAt, itemsObject, vaultRecsObject
             });
         });
         return receipts;
     } catch (e) {
         console.log("Error getting supplier receipts", e);
-        if(e instanceof FirebaseError) {
+        if (e instanceof FirebaseError) {
+            throw e
+        }
+        throw new FirebaseError(FIREBASE_ERROR);
+    }
+}
+
+
+export const getSupplierItemsHelper = async (database: Firestore, supplierUuid: string): Promise<Map<string, ExtendedItem>> => {
+    try {
+        await getSupplier(database, supplierUuid);
+
+        const receiptsRef = collection(database, "items");
+        const q = query(receiptsRef, where("supplierUuid", "==", supplierUuid));
+        const querySnapshot = await getDocs(q);
+        const items: Map<string, ExtendedItem> = new Map();
+        await Promise.all(querySnapshot.docs.map(async item => {
+            const { mass, price, boxes, productUuid, receiptItemUuid, createdAt, updatedAt } = item.data();
+            const { name: productName } = await getProduct(database, productUuid);
+            items.set(item.id, {
+                mass, price, boxes, receiptItemUuid, productName, createdAt, updatedAt, productUuid, supplierUuid
+            });
+        }));
+        return items;
+    } catch (e) {
+        console.log("Error getting supplier receipts", e);
+        if (e instanceof FirebaseError) {
+            throw e
+        }
+        throw new FirebaseError(FIREBASE_ERROR);
+    }
+}
+
+export const getSupplierVaultRecsHelper = async (database: Firestore, supplierUuid: string): Promise<Map<string, Partial<VaultRec>>> => {
+    try {
+        await getSupplier(database, supplierUuid);
+
+        const receiptsRef = collection(database, "vault");
+        const q = query(receiptsRef, where("userUuid", "==", supplierUuid));
+        const querySnapshot = await getDocs(q);
+        const vaultRecs: Map<string, Partial<VaultRec>> = new Map();
+        await Promise.all(querySnapshot.docs.map(async item => {
+            const { amount, createdAt } = item.data();
+            vaultRecs.set(item.id, {
+                amount, createdAt
+            });
+        }));
+        return vaultRecs;
+    } catch (e) {
+        console.log("Error getting supplier receipts", e);
+        if (e instanceof FirebaseError) {
             throw e
         }
         throw new FirebaseError(FIREBASE_ERROR);

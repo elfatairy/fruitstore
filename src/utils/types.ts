@@ -4,7 +4,8 @@ import { EnumType } from "typescript"
 export enum PageType {
     CLIENTS,
     PRODUCTS,
-    SUPPLIERS
+    SUPPLIERS,
+    VAULT
 }
 
 export type userCredential = {
@@ -40,15 +41,19 @@ export type Product = {
     updatedAt: Timestamp
 }
 
-export type Item = {
+export type Item  = {
     productUuid: string,
     supplierUuid: string,
     supplierName?: string,
     receiptItemUuid: string,
     mass: number,
-    boxes: number
+    boxes: number,
+    price: number,
     createdAt: Timestamp, 
     updatedAt: Timestamp
+}
+export type ExtendedItem = Item & {
+    productName: string
 }
 
 export enum ReceiptType {
@@ -61,37 +66,15 @@ export type Receipt = {
     totalPrice: number,
     moneyPaid: number,
     createdAt: Timestamp, 
-    updatedAt: Timestamp
+    updatedAt: Timestamp,
+    itemsObject: Record<string, true>,
+    vaultRecsObject: Record<string, true>
 }
 
-export type FullReceiptItem = {
-    itemUuid: string, 
-    supplierUuid: string, 
-    supplierName: string,
-    productName: string,
-    mass: number,
-    boxes: number,
-    price: number
-}
-
-export type FullReceipt = {
-    type: ReceiptType,
-    userUuid: string, 
+export type FullReceipt = Receipt & {
     userName: string,
-    balanceBefore: number,
-    totalPrice: number,
-    moneyPaid: number,
-    items: FullReceiptItem[],
-    createdAt: Timestamp, 
-    updatedAt: Timestamp
-}
-
-export type ReceiptItem = {
-    receiptUuid: string,
-    itemUuid: string,
-    mass: number,
-    boxes: number,
-    price: number
+    items: ClientItem[] | Item[],
+    vaultRecs: VaultRec[]
 }
 
 export enum AnalysisPeriods {
@@ -100,4 +83,37 @@ export enum AnalysisPeriods {
     MONTH,
     YEAR, 
     ALL
+}
+
+export enum VaultRecType {
+    OUT,
+    IN
+}
+
+export type VaultRec = {
+    userUuid: string,
+    amount: number, 
+    type: VaultRecType,
+    createdAt: Timestamp
+}
+
+export type ExtendedVaultRec = VaultRec & {
+    userName: string
+}
+
+export type ClientItem  = {
+    itemUuid: string,
+    clientUuid: string,
+    receiptItemUuid: string,
+    mass: number,
+    boxes: number,
+    price: number,
+    createdAt: Timestamp, 
+    updatedAt: Timestamp
+}
+export type ExtendedClientItem = ClientItem & {
+    productName: string,
+    supplierUuid: string,
+    supplierName: string,
+    importDate: Timestamp
 }

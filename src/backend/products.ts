@@ -2,7 +2,7 @@ import { addDoc, collection, doc, Firestore, getDoc, getDocs, query, Timestamp, 
 // import { attemptFirebasePush } from "./firebase";
 import { FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, FIREBASE_NOTFOUND_ERROR } from "../config/Constants";
 import { FirebaseError } from "../errors/FirebaseError";
-import { Item, Product } from "../types";
+import { Item, Product } from "../utils/types";
 import { getSupplier } from "./suppliers";
 
 export const getAllProducts = async (database: Firestore): Promise<Map<string, Product>> => {
@@ -43,9 +43,9 @@ export const getProduct = async (database: Firestore, productUuid: string): Prom
             const querySnapshot = await getDocs(q);
             const items: Map<string, Item> = new Map();
             querySnapshot.forEach((itemDoc) => {
-                const {productUuid, supplierUuid, receiptItemUuid, mass, boxes, createdAt, updatedAt} = itemDoc.data();
+                const {productUuid, supplierUuid, receiptItemUuid, mass, boxes, price, createdAt, updatedAt} = itemDoc.data();
                 items.set(itemDoc.id, {
-                    productUuid, supplierUuid, receiptItemUuid, mass, boxes, createdAt, updatedAt
+                    productUuid, supplierUuid, receiptItemUuid, mass, boxes, createdAt, updatedAt, price
                 });
             })
             for(const [Uid, item] of items) {

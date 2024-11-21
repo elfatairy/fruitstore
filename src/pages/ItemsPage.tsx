@@ -4,8 +4,10 @@ import { FIREBASE_CREATING_ERROR, FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, FI
 import { FirebaseError } from '../errors/FirebaseError';
 import { createProduct, getAllProducts, getProduct } from '../backend/products';
 import Layout from './Layout';
-import { Item, PageType, Product } from '../types';
+import { Item, PageType, Product } from '../utils/types';
 import { NavLink, useNavigate, useParams } from 'react-router-dom';
+import { showDate } from '../utils/date';
+import Loading from '../components/Loading';
 
 export default function ItemsPage() {
     const { db } = useAuth();
@@ -68,9 +70,7 @@ export default function ItemsPage() {
     }, []);
 
     if (!product) {
-        return <div>
-            Loading....
-        </div>
+        return <Loading />
     }
 
     return (
@@ -86,33 +86,39 @@ export default function ItemsPage() {
                 <div className='input-container'>
                     <input className='search' placeholder='Search Here' />
                     <svg className='icon' viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M16.6725 16.6412L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#777" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        <path d="M16.6725 16.6412L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 </div>
-                {
-                    product.items ?
-                        <table>
-                            <tr>
-                                <th>Supplier Name</th>
-                                <th>Available Weight</th>
-                                <th>Available Boxes</th>
-                                <th>Imported At</th>
-                            </tr>
-                            {
-                                [...product.items.entries()].map(([id, item]) => {
-                                    return <tr className='nohover'>
-                                        <td onClick={() => navigate(`/suppliers/${item.supplierUuid}`)} className='supplierUid'>{item.supplierName}</td>
-                                        <td>{item.mass}</td>
-                                        <td>{item.boxes}</td>
-                                        <td>{item.createdAt.toDate().toUTCString()}</td>
+                <div className='bottom-contnet'>
+                    {
+                        product.items ?
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Supplier Name</th>
+                                        <th>Available Weight</th>
+                                        <th>Available Boxes</th>
+                                        <th>Imported At</th>
                                     </tr>
-                                })
-                            }
-                        </table> :
-                        <div>
-                            There is no products yet, add a client to interact with him
-                        </div>
-                }
+                                </thead>
+                                <tbody>
+                                    {
+                                        [...product.items.entries()].map(([id, item]) => {
+                                            return <tr key={id} className='nohover'>
+                                                <td onClick={() => navigate(`/suppliers/${item.supplierUuid}`)} className='table-link'>{item.supplierName}</td>
+                                                <td>{item.mass}</td>
+                                                <td>{item.boxes}</td>
+                                                <td>{showDate(item.createdAt.toDate())}</td>
+                                            </tr>
+                                        })
+                                    }
+                                </tbody>
+                            </table> :
+                            <div>
+                                There is no products yet, add a client to interact with him
+                            </div>
+                    }
+                </div>
             </div>
         </Layout>
     )
