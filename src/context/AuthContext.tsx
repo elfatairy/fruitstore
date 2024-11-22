@@ -10,6 +10,7 @@ import { Firestore, getFirestore } from "firebase/firestore";
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from "react";
 import { Roles, userCredential } from "../utils/types";
 import { useNavigate } from "react-router-dom";
+import Loading from "../components/Loading";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDUKW-AkNKBgVKty2AQHkwpWWSF-N9EXyY",
@@ -73,6 +74,8 @@ function AuthProvider({ children }: { children: ReactNode }) {
         callback();
     };
 
+    if(initializing) return <Loading />;
+    
     return (
         <AuthContext.Provider value={{ initializing, user, signin, signout, db }}>
             {children}

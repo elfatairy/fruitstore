@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, Firestore, getDoc, getDocs, query, Timestamp } from "firebase/firestore";
+import { addDoc, collection, doc, endAt, Firestore, getDoc, getDocs, orderBy, query, startAt, Timestamp, where } from "firebase/firestore";
 import { getSupplier, updateBalance } from "./suppliers";
 import { updateAdminBalance } from "./admin";
 import { ExtendedVaultRec, VaultRec, VaultRecType } from "../utils/types";
@@ -7,10 +7,15 @@ import { FirebaseError } from "../errors/FirebaseError";
 import { getClient, updateBalance as updateClientBalance } from "./clients";
 
 
-export const getVaultRecsHelper = async (database: Firestore): Promise<Map<string, ExtendedVaultRec>> => {
+export const getVaultRecsHelper = async (database: Firestore, startDate?: Date, endDate?: Date): Promise<Map<string, ExtendedVaultRec>> => {
     try {
         const receiptsRef = collection(database, "vault");
-        const q = query(receiptsRef);
+        let q;
+        if (startDate && endDate)
+            q = query(receiptsRef, orderBy('createdAt', 'desc'), startAt(endDate), endAt(startDate));
+        else
+            q = query(receiptsRef, orderBy('createdAt', 'desc'))
+        
         const querySnapshot = await getDocs(q);
         const vaultRecs: Map<string, ExtendedVaultRec> = new Map();
         await Promise.all(querySnapshot.docs.map(async item => {

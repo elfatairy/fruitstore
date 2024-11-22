@@ -6,9 +6,10 @@ import { ReactNode } from "react";
 export const RequireAuth = ({ children, role = Roles.STORE }: {children: ReactNode, role?: Roles}) => {
     let {user, initializing} = useAuth();
     const navigate = useNavigate();
-    // JOE: get the location (depending on the routing system)
 
+    console.log("ENTRING AUTH");
     if(initializing) return null; 
+    console.log("PASSING TEST");
 
     if (!user) {
         setTimeout(() => {

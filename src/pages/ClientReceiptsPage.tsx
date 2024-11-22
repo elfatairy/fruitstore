@@ -9,6 +9,7 @@ import { NavLink, useParams } from 'react-router-dom';
 import { getSupplier, getSupplierItemsHelper, getSupplierReceiptsHelper, getSupplierVaultRecsHelper } from '../backend/suppliers';
 import Loading from '../components/Loading';
 import { getClient, getClientReceiptsHelper } from '../backend/clients';
+import RangePicker from '../components/RangePicker';
 
 export default function ClientReceiptsPage() {
     const { db } = useAuth();
@@ -49,9 +50,9 @@ export default function ClientReceiptsPage() {
         }
     }
 
-    const getClientReceipts = async (clientUuid: string) => {
-    try {
-            const receipts = await getClientReceiptsHelper(db!, clientUuid);
+    const getClientReceipts = async (clientUuid: string, startDate?: Date, endDate?: Date) => {
+        try {
+            const receipts = await getClientReceiptsHelper(db!, clientUuid, startDate, endDate);
             if (receipts) {
                 console.log("receipts");
                 console.log(receipts);
@@ -113,6 +114,12 @@ export default function ClientReceiptsPage() {
         }
     }
 
+    const getRangedData = async (startDate?: Date, endDate?: Date) => {
+        if (!clientUuid) return;
+
+        await getClientReceipts(clientUuid, startDate, endDate);
+    }
+
     useEffect(() => {
         if (clientUuid) {
             getClientDetails(clientUuid);
@@ -152,11 +159,14 @@ export default function ClientReceiptsPage() {
                 </div>
             </div>
             <div className='bottom'>
-                <div className='input-container'>
-                    <input className='search' placeholder='Search Here' />
-                    <svg className='icon' viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M16.6725 16.6412L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                <div className='bottom-header'>
+                    <div className='input-container'>
+                        <input className='search' placeholder='Search Here' />
+                        <svg className='icon' viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M16.6725 16.6412L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </div>
+                    <RangePicker getFunction={getRangedData} />
                 </div>
                 <div className='bottom-contnet'>
                     {

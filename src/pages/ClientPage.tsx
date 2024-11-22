@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '../context/AuthContext';
 import { exportItemType, exportItemHelper, getClient, getClientReceiptsHelper, getClientItemsHelper, getClientVaultRecsHelper, createClientReceipt } from '../backend/clients';
-import { FIREBASE_CREATING_ERROR, FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, FIREBASE_NOT_ENOUGH_ERROR, FIREBASE_NOTFOUND_ERROR } from '../config/Constants';
+import { FIREBASE_ERROR, FIREBASE_NOT_ENOUGH_ERROR, FIREBASE_NOTFOUND_ERROR } from '../config/Constants';
 import { FirebaseError } from '../errors/FirebaseError';
 import { getReceipt } from '../backend/receipts';
 import Layout from './Layout';
@@ -10,6 +10,12 @@ import { NavLink, useParams } from 'react-router-dom';
 import Loading from '../components/Loading';
 import { showDate } from '../utils/date';
 import { getPaidHelper } from '../backend/vault';
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
+import { DateRangePicker, Range, RangeKeyDict } from 'react-date-range';
+import { startOfWeek } from 'date-fns';
+import RangePicker from '../components/RangePicker';
+// import { DateRangePicker, RangeKeyDict } from 'react-date-range';
 
 export default function ClientPage() {
     const { db } = useAuth();
@@ -21,6 +27,7 @@ export default function ClientPage() {
     const [totalPrice, setTotalPrice] = useState(0);
     const [vaultRecs, setVaultRecs] = useState<Map<string, Partial<VaultRec>>>();
     const [totalMoney, setTotalMoney] = useState(0);
+
 
     const getClientDetails = async (clientUuid: string) => {
         try {
@@ -86,9 +93,9 @@ export default function ClientPage() {
         }
     }
 
-    const getClientItems = async (clientUuid: string) => {
+    const getClientItems = async (clientUuid: string, startDate?: Date, endDate?: Date) => {
         try {
-            const clientItems = await getClientItemsHelper(db!, clientUuid);
+            const clientItems = await getClientItemsHelper(db!, clientUuid, startDate, endDate);
             if (clientItems) {
                 console.log("clientItems");
                 console.log(clientItems);
@@ -123,9 +130,16 @@ export default function ClientPage() {
         }
     }
 
-    const getClientVaultRecs = async (clientUuid: string) => {
+    const getRangedData = async (startDate?: Date, endDate?: Date) => {
+        if(!clientUuid) return;
+
+        await getClientItems(clientUuid, startDate, endDate);
+        await getClientVaultRecs(clientUuid, startDate, endDate);
+    }
+
+    const getClientVaultRecs = async (clientUuid: string, startDate?: Date, endDate?: Date) => {
         try {
-            const vaultRecs = await getClientVaultRecsHelper(db!, clientUuid);
+            const vaultRecs = await getClientVaultRecsHelper(db!, clientUuid, startDate, endDate);
             if (vaultRecs) {
                 console.log("vaultRecs");
                 console.log(vaultRecs);
@@ -296,11 +310,13 @@ export default function ClientPage() {
     }
 
     useEffect(() => {
+
         if (clientUuid) {
             getClientDetails(clientUuid);
             getClientReceipts(clientUuid);
             getClientItems(clientUuid);
             getClientVaultRecs(clientUuid);
+            // getPaid(200);
             // createReceipt(clientUuid, ["EpFvUzzolncUWWIsHpqk", "ivt95KQD2XamhBXHGOsF", "kEzIBSd1VBgNMamsqIwB"],  ["Dr6MHR8kf6FYMmAzwn6U", "LnjoeTo6HOi0bZtwyY20"])
         }
 
@@ -323,7 +339,7 @@ export default function ClientPage() {
     return (
         <Layout page={PageType.CLIENTS}>
             <div className='top'>
-                <h2 className='title'><NavLink className="link" to="/clients">Clients</NavLink> / {client.username} <span style={{fontSize: 16}}>(<NavLink className="link" to={`/clients/${clientUuid}/receipts`}>Receipts</NavLink>)</span></h2>
+                <h2 className='title'><NavLink className="link" to="/clients">Clients</NavLink> / {client.username} <span style={{ fontSize: 16 }}>(<NavLink className="link" to={`/clients/${clientUuid}/receipts`}>Receipts</NavLink>)</span></h2>
                 <div className='btns'>
                     <button className='btn add'>
                         <span>Export</span>
@@ -352,12 +368,17 @@ export default function ClientPage() {
                 </div>
             </div>
             <div className='bottom'>
-                <div className='input-container'>
-                    <input className='search' placeholder='Search Here' />
-                    <svg className='icon' viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M16.6725 16.6412L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                <div className='bottom-header'>
+                    <div className='input-container'>
+                        <input className='search' placeholder='Search Here' />
+                        <svg className='icon' viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M16.6725 16.6412L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </div>
+
+                    <RangePicker getFunction={getRangedData}/>
                 </div>
+
                 <div className='bottom-contnet'>
                     {
                         clientItems ?

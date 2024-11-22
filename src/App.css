@@ -114,6 +114,7 @@
   transition: all 0.2s ease-in-out;
   opacity: 0;
 }
+
 .layout aside ul li .badge:before {
   content: "";
   position: absolute;
@@ -259,6 +260,7 @@
 .layout .contents {
   height: 100%;
 }
+
 .layout .contents .top {
   display: flex;
   justify-content: space-between;
@@ -363,6 +365,69 @@
   flex: 1;
   overflow-y: hidden;
 }
+
+.layout .contents .bottom .bottom-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.layout .contents .bottom .bottom-header .choose-date-container {
+  position: relative
+}
+
+.layout .contents .bottom .bottom-header .choose-date-container .choose-date-btn {
+  border-radius: 5px;
+  border-width: 3px;
+  border-style: solid;
+  border-color: #f0f0f0;
+  background-color: #f0f0f0;
+  outline: none;
+  box-shadow: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 6px;
+  font-size: 0.8rem;
+  color: #555;
+  font-weight: 600;
+  transition: all 0.2s ease-in;
+  cursor: pointer;
+}
+
+.layout .contents .bottom .bottom-header .choose-date-container .choose-date-btn:hover {
+  background-color: #e0e0e0;
+  border-color: #e0e0e0;
+}
+
+.layout .contents .bottom .bottom-header .choose-date-container .choose-date-btn.open {
+  border-color: #3498db;
+}
+
+.layout .contents .bottom .bottom-header .choose-date-container .close-btn {
+  border: none;
+  background-color: transparent;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.layout .contents .bottom .bottom-header .choose-date-container .close-btnsvg {
+  transition: all 0.2s ease-in;
+}
+
+.layout .contents .bottom .bottom-header .choose-date-container .close-btn:hover svg {
+  fill: #c0392b
+}
+
+.layout .contents .bottom .bottom-header .choose-date-container .date-range-picker {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 5px);
+  border: 2px solid #e0e0e0;
+  box-shadow: 4px 4px #e0e0e055;
+}
+
 .layout .contents .bottom .bottom-contnet {
   overflow-y: auto;
   display: flex;
@@ -418,7 +483,7 @@
   padding: 14px 7px 14px 14px;
   font-size: 0.9rem;
   transition: all 0.2s ease-in-out;
-  
+
 }
 
 .layout .contents .bottom table tr td .td-contents {

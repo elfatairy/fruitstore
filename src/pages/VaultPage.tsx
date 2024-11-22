@@ -8,6 +8,7 @@ import { ExtendedVaultRec, Item, PageType, Product, VaultRec, VaultRecType } fro
 import { useNavigate } from 'react-router-dom';
 import { getVaultRecsHelper } from '../backend/vault';
 import { showDate } from '../utils/date';
+import RangePicker from '../components/RangePicker';
 
 export default function VaultPage() {
     const { db } = useAuth();
@@ -15,9 +16,9 @@ export default function VaultPage() {
     const navigate = useNavigate();
     const [profit, setProfit] = useState(0);
 
-    const getVaultRecs = async () => {
+    const getVaultRecs = async (startDate?: Date, endDate?: Date) => {
         try {
-            const vaultRecs = await getVaultRecsHelper(db!);
+            const vaultRecs = await getVaultRecsHelper(db!, startDate, endDate);
             if (vaultRecs) {
                 console.log("vaultRecs");
                 console.log(vaultRecs);
@@ -52,6 +53,10 @@ export default function VaultPage() {
         }
     }
 
+    const getRangedData = async (startDate?: Date, endDate?: Date) => {
+        await getVaultRecs(startDate, endDate);
+    }
+
     useEffect(() => {
         getVaultRecs();
     }, []);
@@ -77,11 +82,14 @@ export default function VaultPage() {
                 </div>
             </div>
             <div className='bottom'>
-                <div className='input-container'>
-                    <input className='search' placeholder='Search Here' />
-                    <svg className='icon' viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M16.6725 16.6412L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                <div className='bottom-header'>
+                    <div className='input-container'>
+                        <input className='search' placeholder='Search Here' />
+                        <svg className='icon' viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M16.6725 16.6412L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </div>
+                    <RangePicker getFunction={getRangedData} />
                 </div>
                 <div className='bottom-contnet'>
                     {

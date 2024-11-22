@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, Firestore, getDoc, getDocs, query, Timestamp, updateDoc, where } from "firebase/firestore";
+import { addDoc, collection, doc, endAt, Firestore, getDoc, getDocs, orderBy, query, startAt, Timestamp, updateDoc, where } from "firebase/firestore";
 // import { attemptFirebasePush } from "./firebase";
 import { FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, FIREBASE_NOTFOUND_ERROR } from "../config/Constants";
 import { FirebaseError } from "../errors/FirebaseError";
@@ -151,12 +151,17 @@ export const createSupplierReceipt = async (database: Firestore, supplierUuid: s
     }
 }
 
-export const getSupplierReceiptsHelper = async (database: Firestore, supplierUuid: string): Promise<Map<string, Receipt>> => {
+export const getSupplierReceiptsHelper = async (database: Firestore, supplierUuid: string, startDate?: Date, endDate?: Date): Promise<Map<string, Receipt>> => {
     try {
         await getSupplier(database, supplierUuid);
 
         const receiptsRef = collection(database, "receipts");
-        const q = query(receiptsRef, where("userUuid", "==", supplierUuid));
+        let q;
+        if (startDate && endDate)
+            q = query(receiptsRef, where("userUuid", "==", supplierUuid), orderBy('createdAt', 'desc'), startAt(endDate), endAt(startDate));
+        else
+            q = query(receiptsRef, where("userUuid", "==", supplierUuid), orderBy('createdAt', 'desc'))
+        
         const querySnapshot = await getDocs(q);
         const receipts: Map<string, Receipt> = new Map();
         querySnapshot.docs.forEach(receipt => {
@@ -176,12 +181,17 @@ export const getSupplierReceiptsHelper = async (database: Firestore, supplierUui
 }
 
 
-export const getSupplierItemsHelper = async (database: Firestore, supplierUuid: string): Promise<Map<string, ExtendedItem>> => {
+export const getSupplierItemsHelper = async (database: Firestore, supplierUuid: string, startDate?: Date, endDate?: Date): Promise<Map<string, ExtendedItem>> => {
     try {
         await getSupplier(database, supplierUuid);
 
         const receiptsRef = collection(database, "items");
-        const q = query(receiptsRef, where("supplierUuid", "==", supplierUuid));
+        let q;
+        if (startDate && endDate)
+            q = query(receiptsRef, where("supplierUuid", "==", supplierUuid), orderBy('createdAt', 'desc'), startAt(endDate), endAt(startDate));
+        else
+            q = query(receiptsRef, where("supplierUuid", "==", supplierUuid), orderBy('createdAt', 'desc'))
+        
         const querySnapshot = await getDocs(q);
         const items: Map<string, ExtendedItem> = new Map();
         await Promise.all(querySnapshot.docs.map(async item => {
@@ -201,12 +211,17 @@ export const getSupplierItemsHelper = async (database: Firestore, supplierUuid: 
     }
 }
 
-export const getSupplierVaultRecsHelper = async (database: Firestore, supplierUuid: string): Promise<Map<string, Partial<VaultRec>>> => {
+export const getSupplierVaultRecsHelper = async (database: Firestore, supplierUuid: string, startDate?: Date, endDate?: Date): Promise<Map<string, Partial<VaultRec>>> => {
     try {
         await getSupplier(database, supplierUuid);
 
         const receiptsRef = collection(database, "vault");
-        const q = query(receiptsRef, where("userUuid", "==", supplierUuid));
+        let q;
+        if (startDate && endDate)
+            q = query(receiptsRef, where("userUuid", "==", supplierUuid), orderBy('createdAt', 'desc'), startAt(endDate), endAt(startDate));
+        else
+            q = query(receiptsRef, where("userUuid", "==", supplierUuid), orderBy('createdAt', 'desc'))
+
         const querySnapshot = await getDocs(q);
         const vaultRecs: Map<string, Partial<VaultRec>> = new Map();
         await Promise.all(querySnapshot.docs.map(async item => {
