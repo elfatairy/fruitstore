@@ -70,7 +70,7 @@ function RangePicker({getFunction} : {getFunction: (startDate?: Date, endDate?: 
                                 </svg>
                             </button>
                         </> :
-                        "Custom date range"
+                        "اختر تاريخ محدد"
                 }
             </div>
             {showDateRange && <DateRangePicker

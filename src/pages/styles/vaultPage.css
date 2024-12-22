@@ -1,0 +1,557 @@
+/* LAYOUT PAGE */
+.layout {
+    width: 100vw;
+    height: 100vh;
+    background-color: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+}
+
+.layout header {
+    padding: 10px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-direction: row-reverse;
+}
+
+.layout header .left {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    font-size: 0.7rem;
+}
+
+.layout header .left .logo {
+    width: 40px;
+    height: 40px;
+}
+
+.layout header .right .btn {
+    padding: 7px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    background-color: #d35400;
+    color: #fff;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.layout header .right .btn:hover {
+    background-color: #b84a01;
+}
+
+.layout .body {
+    display: flex;
+    flex: 1;
+    overflow-y: hidden;
+    flex-direction: row-reverse;
+}
+
+.layout aside {
+    padding: 40px 30px;
+    width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.layout aside .title {
+    font-size: 0.85rem;
+    color: #aaa;
+}
+
+.layout aside ul {
+    list-style: none;
+    margin: 20px 0;
+    padding: 0;
+}
+
+.layout aside ul li {
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.layout aside ul li:hover,
+.layout aside ul li.active {
+    background-color: #e5e5e5;
+}
+
+.layout aside ul li:hover .badge {
+    opacity: 1;
+}
+
+.layout aside ul li .badge {
+    position: absolute;
+    top: 50%;
+    right: 100%;
+    color: #fff;
+    font-size: 0.7rem;
+    background-color: #222;
+    padding: 8px;
+    border-radius: 5px;
+    transition: all 0.2s ease-in-out;
+    opacity: 0;
+}
+
+.layout aside ul li .badge:before {
+    display: none;
+    content: "";
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: -10px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent #222 transparent transparent;
+}
+
+.layout aside ul li svg {
+    width: 20px;
+    height: 20px;
+    transition: all 0.2s ease-in-out;
+    fill: #bbb;
+    stroke: #bbb
+}
+
+.layout aside ul li.active svg,
+.layout aside ul li:hover svg {
+    fill: #000;
+    stroke: #000
+}
+
+.layout .contents {
+    background-color: #fff;
+    padding: 15px 40px;
+    border-radius: 0 15px 0 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: hidden;
+}
+
+/* Top Section Styles */
+.layout .contents .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-direction: row-reverse;
+}
+
+.layout .contents .top .right-data {
+    display: flex;
+    gap: 20px;
+    flex-direction: row;
+    align-items: center;
+}
+
+.layout .contents .top .btns {
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+}
+
+/* Button Styles */
+.layout .contents .top .btn {
+    border-radius: 20px;
+    color: #fff;
+    display: flex;
+    gap: 5px;
+    border: none;
+    outline: none;
+    padding: 0 10px;
+    height: fit-content;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.5s ease-in-out;
+}
+
+.layout .contents .top .btn.large-btn {
+    padding: 8px 16px;
+    font-size: 1rem;
+    gap: 10px;
+}
+
+.layout .contents .top .btn.customer-pay {
+    background-color: #27ae60;
+}
+
+.layout .contents .top .btn.supplier-pay {
+    background-color: #c0392b;
+}
+
+.layout .contents .top .btn.customer-pay:hover {
+    background-color: #078e40;
+}
+
+.layout .contents .top .btn.supplier-pay:hover {
+    background-color: #a42b1e;
+}
+
+/* Bottom Section Styles */
+.layout .contents .bottom {
+    border: 2px solid #e5e5e5;
+    padding: 15px;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex: 1;
+    min-height: 0;
+}
+
+.layout .contents .bottom .bottom-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-direction: row-reverse;
+}
+
+/* Search Input Styles */
+.layout .contents .bottom .input-container {
+    position: relative;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.layout .contents .bottom .input-container .search {
+    border: none;
+    outline: none;
+    border-radius: 20px;
+    background-color: #f0f0f0;
+    font-size: 0.9rem;
+    padding: 10px 45px 10px 10px;
+    width: 300px;
+    text-align: right;
+}
+
+.layout .contents .bottom .input-container .icon {
+    width: 18px;
+    height: 18px;
+    position: absolute;
+    top: 50%;
+    right: 15px;
+    transform: translateY(-50%);
+}
+
+/* Table Styles */
+.layout .contents .bottom .bottom-content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.layout .contents .bottom table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.layout .contents .bottom table thead {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.layout .contents .bottom table thead tr {
+    background-color: #f0f0f0;
+}
+
+.layout .contents .bottom table tr th {
+    background-color: transparent;
+    border: none;
+    outline: none;
+    padding: 14px 7px 14px 14px;
+    font-size: 0.9rem;
+    color: #555;
+    text-align: center;
+}
+
+.layout .contents .bottom table tr td {
+    padding: 14px 7px 14px 14px;
+    font-size: 0.9rem;
+    transition: all 0.2s ease-in-out;
+    text-align: center;
+}
+
+.layout .contents .bottom table tr td .td-contents {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.layout .contents .bottom table tr td.table-link {
+    cursor: pointer;
+    color: #2980b9;
+}
+
+.layout .contents .bottom table tr td.table-link:hover {
+    text-decoration: underline;
+    background-color: #f0f0f0;
+}
+
+.layout .contents .bottom table tr:not(.nohover) {
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+}
+
+.layout .contents .bottom table tr:not(:last-of-type) {
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.layout .contents .bottom table tr:not(.nohover):hover {
+    background-color: #f0f0f0;
+}
+
+.layout .contents .bottom table tbody tr:last-child td {
+    padding-bottom: 20px;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 15px;
+    width: 400px;
+    max-width: 90%;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #333;
+}
+
+.modal .search-input,
+.modal .amount-input {
+    width: 100%;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 2px solid #f0f0f0;
+    border-radius: 10px;
+    outline: none;
+    text-align: right;
+    transition: border-color 0.2s ease-in-out;
+}
+
+.modal .search-input:focus,
+.modal .amount-input:focus {
+    border-color: #3498db;
+}
+
+/* Search Dropdown Styles */
+.input-container {
+    position: relative;
+}
+
+.search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    border: 2px solid #f0f0f0;
+    border-top: none;
+    z-index: 10;
+    background-color: white;
+}
+
+.search-dropdown option {
+    padding: 10px;
+    cursor: pointer;
+    text-align: right;
+}
+
+.search-dropdown option:hover {
+    background-color: #f0f0f0;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.modal-actions button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.modal-actions button:first-child {
+    background-color: #2980b9;
+    color: #fff;
+}
+
+.modal-actions button:first-child:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.modal-actions button:last-child {
+    background-color: #e74c3c;
+    color: #fff;
+}
+
+.modal-actions button:hover:not(:disabled) {
+    opacity: 0.9;
+}
+
+/* Add these styles to your existing CSS file */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 15px;
+    width: 600px;
+    max-width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-content h2 {
+    margin: 0 0 20px 0;
+    text-align: center;
+    color: #333;
+    font-size: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    display: block;
+    text-align: right;
+    margin-bottom: 5px;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    text-align: right;
+}
+
+.item-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.item-row select,
+.item-row input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    text-align: right;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.modal-actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.modal-actions button[type="button"] {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.modal-actions button[type="submit"] {
+    background-color: #2980b9;
+    color: white;
+}
+
+.modal-actions button:hover {
+    opacity: 0.9;
+}
+
+.close {
+    float: left;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+}
+
+.search-dropdown {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    z-index: 100;
+}
+
+.search-dropdown option {
+    padding: 10px;
+    text-align: right;
+    cursor: pointer;
+}
+
+.search-dropdown option:hover {
+    background-color: #f5f5f5;
+}

@@ -26,6 +26,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-direction: row-reverse;
 }
 
 .layout header .left {
@@ -60,6 +61,7 @@
   display: flex;
   flex: 1;
   overflow-y: hidden;
+  flex-direction: row-reverse;
 }
 
 .layout aside {
@@ -105,7 +107,7 @@
 .layout aside ul li .badge {
   position: absolute;
   top: 50%;
-  left: 100%;
+  right: 100%;
   color: #fff;
   font-size: 0.7rem;
   background-color: #222;
@@ -116,6 +118,7 @@
 }
 
 .layout aside ul li .badge:before {
+  display: none;
   content: "";
   position: absolute;
   top: 50%;
@@ -143,7 +146,7 @@
 .layout .contents {
   background-color: #fff;
   padding: 15px 40px;
-  border-radius: 15px 0 0 0;
+  border-radius: 0 15px 0 0;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -265,6 +268,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-direction: row-reverse;
 }
 
 .layout .contents .top .title .link {
@@ -370,6 +374,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-direction: row-reverse;
 }
 
 .layout .contents .bottom .bottom-header .choose-date-container {
@@ -422,10 +427,11 @@
 
 .layout .contents .bottom .bottom-header .choose-date-container .date-range-picker {
   position: absolute;
-  right: 0;
+  left: 0;
   top: calc(100% + 5px);
   border: 2px solid #e0e0e0;
   box-shadow: 4px 4px #e0e0e055;
+  z-index: 100;
 }
 
 .layout .contents .bottom .bottom-contnet {
@@ -445,8 +451,10 @@
   border-radius: 20px;
   background-color: #f0f0f0;
   font-size: 0.9rem;
-  padding: 10px 10px 10px 45px;
+  padding: 10px 45px 10px 10px;  ;
   width: 300px;
+  text-align: right;
+
 }
 
 .layout .contents .bottom .input-container .icon {
@@ -454,7 +462,7 @@
   height: 18px;
   position: absolute;
   top: 50%;
-  left: 15px;
+  right: 15px;
   transform: translateY(-50%);
 }
 
@@ -476,19 +484,21 @@
   padding: 14px 7px 14px 14px;
   font-size: 0.9rem;
   color: #555;
-  text-align: left;
+  text-align: center;
 }
 
 .layout .contents .bottom table tr td {
   padding: 14px 7px 14px 14px;
   font-size: 0.9rem;
   transition: all 0.2s ease-in-out;
+text-align: center;
 
 }
 
 .layout .contents .bottom table tr td .td-contents {
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
 .layout .contents .bottom table tr td.table-link {
@@ -512,4 +522,201 @@
 
 .layout .contents .bottom table tr:not(.nohover):hover {
   background-color: #f0f0f0;
+}
+
+
+
+
+/* Modal Base */
+.modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: #fefefe;
+  padding: 20px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80%;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+/* Close Button */
+.modal .close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-left: 10px;
+}
+
+.modal .close:hover {
+  color: #000;
+}
+
+/* Form Elements */
+.modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.modal .input-container {
+  width: 100%;
+}
+
+.modal input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 0.95rem;
+  text-align: right;
+}
+
+.modal input:focus {
+  outline: none;
+  border-color: #2980b9;
+  box-shadow: 0 0 0 2px rgba(41, 128, 185, 0.1);
+}
+
+/* Button Container */
+.modal .flex {
+  display: flex;
+  gap: 12px;
+}
+
+.modal .justify-end {
+  justify-content: center;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 640px) {
+  .modal-content {
+      width: 95%;
+      margin: 10px;
+      padding: 15px;
+  }
+  
+  .modal .flex {
+      flex-direction: column-reverse;
+  }
+  
+  .modal .btn {
+      width: 100%;
+  }
+}
+
+/* RTL Specific Adjustments */
+.modal h3 {
+  text-align: right;
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* Base Button Styles */
+.btn {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: fit-content;
+}
+
+/* Add Button Style */
+.btn.add {
+  background-color: #2980b9;
+  color: #fff;
+}
+
+.btn.add:hover {
+  background-color: #2471a3;
+}
+
+/* Cancel/Pay Button Style */
+.btn.pay {
+  background-color: #f39c12;
+  color: #fff;
+}
+
+.btn.pay:hover {
+  background-color: #d68910;
+}
+
+/* Receipt Button Style */
+.btn.receipt {
+  background-color: #27ae60;
+  color: #fff;
+}
+
+.btn.receipt:hover {
+  background-color: #219a52;
+}
+
+/* Button with Icon */
+.btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Button Text */
+.btn span {
+  white-space: nowrap;
+}
+
+/* Button States */
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(41, 128, 185, 0.2);
+}
+
+/* Button Sizes */
+.btn.small {
+  padding: 6px 12px;
+  font-size: 0.8rem;
+}
+
+.btn.large {
+  padding: 12px 24px;
+  font-size: 1rem;
+}
+
+/* Full Width Button */
+.btn.full-width {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 640px) {
+  .btn {
+      padding: 10px 16px;
+  }
 }

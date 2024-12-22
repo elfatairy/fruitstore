@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext';
+import { createSupplier, getAllSuppliers } from '../backend/suppliers';
 import { FIREBASE_CREATING_ERROR, FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, FIREBASE_NOT_ENOUGH_ERROR, FIREBASE_NOTFOUND_ERROR } from '../config/Constants';
 import { FirebaseError } from '../errors/FirebaseError';
-import { createSupplier, getAllSuppliers, getSupplier, getSupplierReceiptsHelper, importItem, importItemHelper } from '../backend/suppliers';
 import Layout from './Layout';
 import { PageType, Supplier } from '../utils/types';
 import { useNavigate } from 'react-router-dom';
@@ -12,29 +12,30 @@ export default function SuppliersPage() {
     const [first, setFirst] = useState(true);
     const [suppliers, setSuppliers] = useState<Map<string, Supplier>>();
     const navigate = useNavigate();
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [supplierName, setSupplierName] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
 
-    const addSupplier = async (supplierName: string, number: string) => {
+    const handleAddSupplier = async () => {
+        if (!supplierName.trim() || !phoneNumber.trim()) return;
+        
         try {
-            const key = await createSupplier(db!, supplierName, number);
+            const key = await createSupplier(db!, supplierName, phoneNumber);
             if (key) {
-                console.log(key);
-                // JOE: Handle successul creation
+                // Refresh suppliers list
+                getSuppliers();
+                // Reset form
+                setSupplierName('');
+                setPhoneNumber('');
+                // Close modal
+                setIsModalOpen(false);
             }
         } catch (error) {
             console.log("ERROR");
             if (error instanceof FirebaseError) {
                 if (error.code === FIREBASE_ERROR) {
-                    /* showMessage({
-                        message: 'Success',
-                        description: 'حدث خطأ ما , برجاء المحاولة مرة أخري لاحقا ',
-                        type: 'success',
-                        duration: 3000,
-                        floating: true,
-                        autoHide: true,
-                    }); */
-                    // JOE: add this feature
-                } else if (error.code === FIREBASE_NAME_EXISTS_ERROR) {
-                    // JOE: 
+                    console.error('Error creating supplier');
                 } else {
                     console.error('An error occurred with code:', error.code);
                 }
@@ -48,23 +49,12 @@ export default function SuppliersPage() {
         try {
             const suppliers = await getAllSuppliers(db!);
             if (suppliers) {
-                console.log("Suppliers");
-                console.log(suppliers);
-                setSuppliers(suppliers)
+                setSuppliers(suppliers);
             }
         } catch (error) {
             if (error instanceof FirebaseError) {
                 if (error.code === FIREBASE_ERROR) {
                     console.log("ERROR");
-                    // JOE: FIX this
-                    /* showMessage({
-                        message: 'Success',
-                        description: 'حدث خطأ ما , برجاء المحاولة مرة أخري لاحقا ',
-                        type: 'success',
-                        duration: 3000,
-                        floating: true,
-                        autoHide: true,
-                    }); */
                 } else {
                     console.error('An error occurred with code:', error.code);
                 }
@@ -73,94 +63,39 @@ export default function SuppliersPage() {
             }
         }
     }
-
-    const getSupplierDetails = async (supplierUuid: string) => {
-        try {
-            const supplier = await getSupplier(db!, supplierUuid);
-            if (supplier) {
-                console.log("supplier");
-                console.log(supplier);
-                // JOE: SET THE Client
-            }
-        } catch (error) {
-            if (error instanceof FirebaseError) {
-                if (error.code === FIREBASE_ERROR) {
-                    console.log("ERROR");
-                    // JOE: FIX this
-                    /* showMessage({
-                        message: 'Success',
-                        description: 'حدث خطأ ما , برجاء المحاولة مرة أخري لاحقا ',
-                        type: 'success',
-                        duration: 3000,
-                        floating: true,
-                        autoHide: true,
-                    }); */
-                } else if (error.code === FIREBASE_NOTFOUND_ERROR) {
-                    // JOE
-                } else {
-                    console.error('An error occurred with code:', error.code);
-                }
-            } else {
-                console.error('An unexpected error occurred:', error);
-            }
-        }
-    }
-
-    const getSupplierReceipts = async (supplierUuid: string) => {
-        try {
-            const receipts = await getSupplierReceiptsHelper(db!, supplierUuid);
-            if (receipts) {
-                console.log("receipts");
-                console.log(receipts);
-                // JOE: SET THE receipts
-            }
-        } catch (error) {
-            if (error instanceof FirebaseError) {
-                if (error.code === FIREBASE_ERROR) {
-                    console.log("ERROR");
-                    // JOE: FIX this
-                    /* showMessage({
-                        message: 'Success',
-                        description: 'حدث خطأ ما , برجاء المحاولة مرة أخري لاحقا ',
-                        type: 'success',
-                        duration: 3000,
-                        floating: true,
-                        autoHide: true,
-                    }); */
-                } else if (error.code === FIREBASE_NOTFOUND_ERROR) {
-                    // JOE
-                } else {
-                    console.error('An error occurred with code:', error.code);
-                }
-            } else {
-                console.error('An unexpected error occurred:', error);
-            }
-        }
-    }
-
 
     useEffect(() => {
-        // addSupplier("Omar", "01021853989");
-        getSuppliers()
-        // getSupplierDetails("azQugowBzv9m2ncXcjSSz");
+        getSuppliers();
         if (first) {
             setFirst(false);
-            // getSupplierReceipts("RMAvvJC7pnyvEpg1jyPW");
-            // importItem("RMAvvJC7pnyvEpg1jyPW", {
-            //     productUuid: "ObqGXhTQ9qzLpR3Ksx4v",
-            //     mass: 20,
-            //     boxes: 10,
-            //     price: 10
-            // });
         }
+    }, [db]);
+
+    // Close modal if Escape key is pressed
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setIsModalOpen(false);
+            }
+        };
+
+        window.addEventListener('keydown', handleEscape);
+        return () => window.removeEventListener('keydown', handleEscape);
     }, []);
+
+    // Filter suppliers based on search query
+    const filteredSuppliers = suppliers ? 
+        new Map([...suppliers.entries()].filter(([_, supplier]) => 
+            supplier.username.toLowerCase().includes(searchQuery.toLowerCase())
+        ))
+        : new Map();
 
     return (
         <Layout page={PageType.SUPPLIERS}>
             <div className='top'>
-                <h2 className='title'>Suppliers</h2>
-                <button className='btn add'>
-                    <span>Add New</span>
+                <h2 className='title'>الموردين</h2>
+                <button className='btn add' onClick={() => setIsModalOpen(true)}>
+                    <span>إضافة مورد</span>
                     <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <g id="Edit / Add_Plus">
                             <path id="Vector" d="M6 12H12M12 12H18M12 12V18M12 12V6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -168,39 +103,100 @@ export default function SuppliersPage() {
                     </svg>
                 </button>
             </div>
+            
+            {isModalOpen && (
+                <div className="modal">
+                    <div className="modal-content">
+                        <span className="close" onClick={() => setIsModalOpen(false)}>&times;</span>
+                        
+                        <h3 className="text-right mb-4 text-xl">إضافة مورد جديد</h3>
+                        
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            handleAddSupplier();
+                        }}>
+                            <div className="input-container">
+                                <input 
+                                    placeholder="اسم المورد"
+                                    value={supplierName}
+                                    onChange={(e) => setSupplierName(e.target.value)}
+                                    className="w-full"
+                                />
+                            </div>
+                            
+                            <div className="input-container">
+                                <input 
+                                    placeholder="رقم الهاتف"
+                                    value={phoneNumber}
+                                    onChange={(e) => setPhoneNumber(e.target.value)}
+                                    className="w-full"
+                                />
+                            </div>
+                            
+                            <div className="flex justify-end gap-3">
+                                <button 
+                                    type="submit"
+                                    className="btn add"
+                                >
+                                    إضافة
+                                </button>
+                                <button 
+                                    type="button"
+                                    className="btn pay"
+                                    onClick={() => setIsModalOpen(false)}
+                                >
+                                    إلغاء
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             <div className='bottom'>
                 <div className='input-container'>
-                    <input className='search' placeholder='Search Here' />
+                    <input 
+                        className='search' 
+                        placeholder='ابحث هنا'
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                     <svg className='icon' viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M16.6725 16.6412L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                 </div>
                 <div className='bottom-contnet'>
                     {
-                        suppliers ?
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Name</th>
-                                        <th>Number</th>
-                                        <th>Balance</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {
-                                        [...suppliers.entries()].map(([id, supplier]) => {
-                                            return <tr key={id} onClick={() => navigate(`/suppliers/${id}`)}>
-                                                <td>{supplier.username}</td>
-                                                <td>{supplier.number}</td>
-                                                <td>{supplier.balance}</td>
-                                            </tr>
-                                        })
-                                    }
-                                </tbody>
-                            </table> :
+                        suppliers ? (
+                            filteredSuppliers.size > 0 ? (
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>الرصيد</th>
+                                            <th>الرقم</th>
+                                            <th>الاسم</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {
+                                            [...filteredSuppliers.entries()].map(([id, supplier]) => {
+                                                return <tr key={id} onClick={() => navigate(`/suppliers/${id}`)}>
+                                                    <td>{supplier.balance}</td>
+                                                    <td>{supplier.number}</td>
+                                                    <td>{supplier.username}</td>
+                                                </tr>
+                                            })
+                                        }
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <div>لا يوجد موردين مطابقين لبحثك</div>
+                            )
+                        ) : (
                             <div>
-                                There is no suppliers yet, add a client to interact with him
+                                لا يوجد موردين حتى الآن، أضف مورد للتفاعل معه
                             </div>
+                        )
                     }
                 </div>
             </div>

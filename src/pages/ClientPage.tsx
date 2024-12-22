@@ -8,14 +8,12 @@ import Layout from './Layout';
 import { Client, ExtendedClientItem, PageType, Receipt, VaultRec } from '../utils/types';
 import { NavLink, useParams } from 'react-router-dom';
 import Loading from '../components/Loading';
-import { showDate } from '../utils/date';
+import { formatArabicDate } from '../utils/date';
 import { getPaidHelper } from '../backend/vault';
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
-import { DateRangePicker, Range, RangeKeyDict } from 'react-date-range';
-import { startOfWeek } from 'date-fns';
 import RangePicker from '../components/RangePicker';
-// import { DateRangePicker, RangeKeyDict } from 'react-date-range';
+import { Timestamp } from 'firebase/firestore';
 
 export default function ClientPage() {
     const { db } = useAuth();
@@ -27,7 +25,7 @@ export default function ClientPage() {
     const [totalPrice, setTotalPrice] = useState(0);
     const [vaultRecs, setVaultRecs] = useState<Map<string, Partial<VaultRec>>>();
     const [totalMoney, setTotalMoney] = useState(0);
-
+    const [searchTerm, setSearchTerm] = useState('');
 
     const getClientDetails = async (clientUuid: string) => {
         try {
@@ -309,6 +307,24 @@ export default function ClientPage() {
         }
     }
 
+        // Add sorting function for client items
+        const getSortedClientItems = () => {
+            if (!clientItems) return [];
+            return [...clientItems.entries()].sort((a, b) => 
+                b[1].createdAt.toDate().getTime() - a[1].createdAt.toDate().getTime()
+            );
+        };
+    
+        // Add filter function for search
+        const getFilteredClientItems = () => {
+            const sorted = getSortedClientItems();
+            if (!searchTerm) return sorted;
+            return sorted.filter(([_, item]) => 
+                `${item.productName} - ${item.supplierName} - ${formatArabicDate(item.importDate.toDate())}`.includes(searchTerm)
+            );
+        };
+
+
     useEffect(() => {
 
         if (clientUuid) {
@@ -336,47 +352,188 @@ export default function ClientPage() {
         return <Loading />
     }
 
+        // Helper function to safely format dates
+        const formatDateSafe = (timestamp: Timestamp | undefined) => {
+            if (!timestamp) return "---";
+            return formatArabicDate(timestamp.toDate());
+        };
+
+
+// First, let's add the receipt generation function with proper types
+const generateReceiptHTML = (
+    client: Client,
+    filteredItems: [string, ExtendedClientItem][],
+    totalPrice: number,
+    vaultRecs: Map<string, Partial<VaultRec>>,
+    totalMoney: number
+) => {
+    const currentDate = new Date();
+    return `
+        <!DOCTYPE html>
+        <html dir="rtl">
+        <head>
+            <meta charset="UTF-8">
+            <title>إيصال ${client.username}</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 20px;
+                    direction: rtl;
+                }
+                .header {
+                    text-align: center;
+                    margin-bottom: 20px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-bottom: 20px;
+                }
+                th, td {
+                    border: 1px solid #ddd;
+                    padding: 8px;
+                    text-align: right;
+                }
+                th {
+                    background-color: #f2f2f2;
+                }
+                .total {
+                    font-weight: bold;
+                }
+                .date {
+                    text-align: left;
+                    margin-bottom: 20px;
+                }
+                @media print {
+                    .no-print {
+                        display: none;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>إيصال ل${client.username}</h1>
+                <div class="date">التاريخ: ${formatArabicDate(currentDate)}</div>
+            </div>
+            
+            <h2>المنتجات</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>رمز المنتج</th>
+                            <th>الصناديق</th>
+                            <th>الوزن</th>
+                            <th>السعر/ كجم</th>
+                        <th>تاريخ التصدير</th>
+                        <th>السعر الإجمالي</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${filteredItems.map(([id, item]) => `
+                        <tr>
+                            <td>${item.productName} - ${item.supplierName} - ${formatArabicDate(item.importDate.toDate())}</td>
+                            <td>${item.boxes}</td>
+                            <td>${item.mass}</td>
+                            <td>${item.price}</td>
+                            <td>${formatArabicDate(item.createdAt.toDate())}</td>
+                            <td>${item.price * item.mass}</td>
+                        </tr>
+                    `).join('')}
+                    <tr class="total">
+                        <td colspan="4">الإجمالي</td>
+                        <td>${totalPrice}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>المدفوعات</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>المبلغ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${Array.from(vaultRecs.entries()).map(([id, item]) => `
+                        <tr>
+                            <td>${formatArabicDate(item.createdAt?.toDate() ?? new Date())}</td>
+                            <td>${item.amount}</td>
+                        </tr>
+                    `).join('')}
+                    <tr class="total">
+                        <td>الإجمالي</td>
+                        <td>${totalMoney}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="total-summary" style="text-align: left; margin-top: 20px; font-size: 18px; display : flex ; justify-content: space-around;">
+                <div>إجمالي المنتجات: ${totalPrice}</div>
+                <div>إجمالي المدفوعات: ${totalMoney}</div>
+                <div>المتبقي: ${totalPrice - totalMoney}</div>
+            </div>
+
+            <div class="no-print">
+                <button onclick="window.print()" style="    width: 130px;
+    height: 40px;
+    border-radius: 20px;
+    font-size: x-large;"
+    >طباعة</button>
+            </div>
+        </body>
+        </html>
+    `;
+};
+
+// Add the print handler function
+const handlePrintReceipt = () => {
+    if (!client || !clientItems || !vaultRecs) return;
+    
+    const filteredItems = getFilteredClientItems();
+    const receiptWindow = window.open('', '_blank');
+    if (receiptWindow) {
+        receiptWindow.document.write(generateReceiptHTML(client, filteredItems, totalPrice, vaultRecs, totalMoney));
+        receiptWindow.document.close();
+    }
+};
+
+    
     return (
         <Layout page={PageType.CLIENTS}>
             <div className='top'>
-                <h2 className='title'><NavLink className="link" to="/clients">Clients</NavLink> / {client.username} <span style={{ fontSize: 16 }}>(<NavLink className="link" to={`/clients/${clientUuid}/receipts`}>Receipts</NavLink>)</span></h2>
+                <h2 className='title'>
+                <NavLink className="link" to="/clients">العملاء</NavLink> / {client.username} 
+                <span style={{ fontSize: 16 }}>(<NavLink className="link" to={`/clients/${clientUuid}/receipts`}>الإيصالات</NavLink>)</span></h2>
                 <div className='btns'>
-                    <button className='btn add'>
-                        <span>Export</span>
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none">
-                            <path d="M9.31995 6.49994L11.8799 3.93994L14.4399 6.49994" stroke="#fff" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M11.88 14.18V4.01001" stroke="#fff" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M4 12C4 16.42 7 20 12 20C17 20 20 16.42 20 12" stroke="#fff" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                    </button>
-                    <button className='receipt btn'>
-                        <span>Make Receipt</span>
-                        <svg width="800px" height="800px" viewBox="0 -0.5 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path fillRule="evenodd" clipRule="evenodd" d="M8.775 17.9344L6.847 18.8784C6.77321 18.9152 6.68572 18.9115 6.61528 18.8687C6.54484 18.8259 6.50131 18.7499 6.5 18.6674V5.33343C6.50165 5.25118 6.54531 5.17551 6.61569 5.13291C6.68607 5.09032 6.77337 5.08674 6.847 5.12343L8.775 6.06743C8.85208 6.10494 8.94319 6.09925 9.015 6.05243L10.567 5.03943C10.6479 4.98686 10.7521 4.98686 10.833 5.03943L12.367 6.03943C12.4479 6.09201 12.5521 6.09201 12.633 6.03943L14.167 5.03943C14.2479 4.98686 14.3521 4.98686 14.433 5.03943L15.984 6.05243C16.0558 6.09925 16.1469 6.10494 16.224 6.06743L18.153 5.12343C18.2266 5.08674 18.3139 5.09032 18.3843 5.13291C18.4547 5.17551 18.4984 5.25118 18.5 5.33343V18.6674C18.4984 18.7497 18.4547 18.8254 18.3843 18.868C18.3139 18.9106 18.2266 18.9141 18.153 18.8774L16.225 17.9334C16.1479 17.8959 16.0568 17.9016 15.985 17.9484L14.433 18.9614C14.3521 19.014 14.2479 19.014 14.167 18.9614L12.633 17.9614C12.5521 17.9089 12.4479 17.9089 12.367 17.9614L10.833 18.9614C10.7521 19.014 10.6479 19.014 10.567 18.9614L9.016 17.9484C8.94376 17.9016 8.85218 17.8963 8.775 17.9344Z" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M9.5 10.2505C9.08579 10.2505 8.75 10.5863 8.75 11.0005C8.75 11.4147 9.08579 11.7505 9.5 11.7505V10.2505ZM15.5 11.7505C15.9142 11.7505 16.25 11.4147 16.25 11.0005C16.25 10.5863 15.9142 10.2505 15.5 10.2505V11.7505ZM10.5 12.2505C10.0858 12.2505 9.75 12.5863 9.75 13.0005C9.75 13.4147 10.0858 13.7505 10.5 13.7505V12.2505ZM14.5 13.7505C14.9142 13.7505 15.25 13.4147 15.25 13.0005C15.25 12.5863 14.9142 12.2505 14.5 12.2505V13.7505ZM9.5 11.7505H15.5V10.2505H9.5V11.7505ZM10.5 13.7505H14.5V12.2505H10.5V13.7505Z" fill="#fff" />
-                        </svg>
-                    </button>
-                    <button className='pay btn'>
-                        <span>Get Paid</span>
-                        <svg width="800px" height="800px" viewBox="-0.5 0 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12.8702 16.97V18.0701C12.8702 18.2478 12.7995 18.4181 12.6739 18.5437C12.5482 18.6694 12.3778 18.74 12.2001 18.74C12.0224 18.74 11.852 18.6694 11.7264 18.5437C11.6007 18.4181 11.5302 18.2478 11.5302 18.0701V16.9399C11.0867 16.8668 10.6625 16.7051 10.2828 16.4646C9.90316 16.2241 9.57575 15.9097 9.32013 15.54C9.21763 15.428 9.16061 15.2817 9.16016 15.1299C9.16006 15.0433 9.17753 14.9576 9.21155 14.8779C9.24557 14.7983 9.29545 14.7263 9.35809 14.6665C9.42074 14.6067 9.49484 14.5601 9.57599 14.5298C9.65713 14.4994 9.7436 14.4859 9.83014 14.49C9.91602 14.4895 10.0009 14.5081 10.0787 14.5444C10.1566 14.5807 10.2254 14.6338 10.2802 14.7C10.6 15.1178 11.0342 15.4338 11.5302 15.6099V13.0701C10.2002 12.5401 9.53015 11.77 9.53015 10.76C9.55019 10.2193 9.7627 9.70353 10.1294 9.30566C10.4961 8.9078 10.9929 8.65407 11.5302 8.59009V7.47998C11.5302 7.30229 11.6007 7.13175 11.7264 7.0061C11.852 6.88045 12.0224 6.81006 12.2001 6.81006C12.3778 6.81006 12.5482 6.88045 12.6739 7.0061C12.7995 7.13175 12.8702 7.30229 12.8702 7.47998V8.58008C13.2439 8.63767 13.6021 8.76992 13.9234 8.96924C14.2447 9.16856 14.5226 9.43077 14.7402 9.73999C14.8284 9.85568 14.8805 9.99471 14.8901 10.1399C14.8928 10.2256 14.8783 10.3111 14.8473 10.3911C14.8163 10.4711 14.7696 10.5439 14.7099 10.6055C14.6502 10.667 14.5787 10.7161 14.4998 10.7495C14.4208 10.7829 14.3359 10.8001 14.2501 10.8C14.1607 10.7989 14.0725 10.7787 13.9915 10.7407C13.9104 10.7028 13.8384 10.648 13.7802 10.5801C13.5417 10.2822 13.2274 10.054 12.8702 9.91992V12.1699L13.1202 12.27C14.3902 12.76 15.1802 13.4799 15.1802 14.6299C15.163 15.2399 14.9149 15.8208 14.4862 16.2551C14.0575 16.6894 13.4799 16.9449 12.8702 16.97ZM11.5302 11.5901V9.96997C11.3688 10.0285 11.2298 10.1363 11.1329 10.2781C11.0361 10.4198 10.9862 10.5884 10.9902 10.76C10.9984 10.93 11.053 11.0945 11.1483 11.2356C11.2435 11.3767 11.3756 11.4889 11.5302 11.5601V11.5901ZM13.7302 14.6599C13.7302 14.1699 13.3902 13.8799 12.8702 13.6599V15.6599C13.1157 15.6254 13.3396 15.5009 13.4985 15.3105C13.6574 15.1202 13.74 14.8776 13.7302 14.6299V14.6599Z" fill="#fff" />
-                            <path d="M12.58 3.96997H6C4.93913 3.96997 3.92178 4.39146 3.17163 5.1416C2.42149 5.89175 2 6.9091 2 7.96997V17.97C2 19.0308 2.42149 20.0482 3.17163 20.7983C3.92178 21.5485 4.93913 21.97 6 21.97H18C19.0609 21.97 20.0783 21.5485 20.8284 20.7983C21.5786 20.0482 22 19.0308 22 17.97V11.8999" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M21.9998 2.91992L16.3398 8.57992" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M20.8698 8.5798H16.3398V4.0498" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                    </button>
+    
+                <button className='receipt btn' onClick={handlePrintReceipt}>
+                    <span>إنشاء إيصال</span>
+                    <svg width="800px" height="800px" viewBox="0 -0.5 25 25" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M8.775 17.9344L6.847 18.8784C6.77321 18.9152 6.68572 18.9115 6.61528 18.8687C6.54484 18.8259 6.50131 18.7499 6.5 18.6674V5.33343C6.50165 5.25118 6.54531 5.17551 6.61569 5.13291C6.68607 5.09032 6.77337 5.08674 6.847 5.12343L8.775 6.06743C8.85208 6.10494 8.94319 6.09925 9.015 6.05243L10.567 5.03943C10.6479 4.98686 10.7521 4.98686 10.833 5.03943L12.367 6.03943C12.4479 6.09201 12.5521 6.09201 12.633 6.03943L14.167 5.03943C14.2479 4.98686 14.3521 4.98686 14.433 5.03943L15.984 6.05243C16.0558 6.09925 16.1469 6.10494 16.224 6.06743L18.153 5.12343C18.2266 5.08674 18.3139 5.09032 18.3843 5.13291C18.4547 5.17551 18.4984 5.25118 18.5 5.33343V18.6674C18.4984 18.7497 18.4547 18.8254 18.3843 18.868C18.3139 18.9106 18.2266 18.9141 18.153 18.8774L16.225 17.9334C16.1479 17.8959 16.0568 17.9016 15.985 17.9484L14.433 18.9614C14.3521 19.014 14.2479 19.014 14.167 18.9614L12.633 17.9614C12.5521 17.9089 12.4479 17.9089 12.367 17.9614L10.833 18.9614C10.7521 19.014 10.6479 19.014 10.567 18.9614L9.016 17.9484C8.94376 17.9016 8.85218 17.8963 8.775 17.9344Z" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M9.5 10.2505C9.08579 10.2505 8.75 10.5863 8.75 11.0005C8.75 11.4147 9.08579 11.7505 9.5 11.7505V10.2505ZM15.5 11.7505C15.9142 11.7505 16.25 11.4147 16.25 11.0005C16.25 10.5863 15.9142 10.2505 15.5 10.2505V11.7505ZM10.5 12.2505C10.0858 12.2505 9.75 12.5863 9.75 13.0005C9.75 13.4147 10.0858 13.7505 10.5 13.7505V12.2505ZM14.5 13.7505C14.9142 13.7505 15.25 13.4147 15.25 13.0005C15.25 12.5863 14.9142 12.2505 14.5 12.2505V13.7505ZM9.5 11.7505H15.5V10.2505H9.5V11.7505ZM10.5 13.7505H14.5V12.2505H10.5V13.7505Z" fill="#fff" />
+                    </svg>
+                </button>
+      
                 </div>
             </div>
-            <div className='bottom'>
+           <div className='bottom' style={{ direction: 'rtl' }}>
                 <div className='bottom-header'>
+                <RangePicker getFunction={getRangedData}/>
+
                     <div className='input-container'>
-                        <input className='search' placeholder='Search Here' />
+                        <input 
+                            className='search' 
+                            placeholder='بحث برمز المنتج' 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                         <svg className='icon' viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M16.6725 16.6412L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                     </div>
 
-                    <RangePicker getFunction={getRangedData}/>
                 </div>
 
                 <div className='bottom-contnet'>
@@ -385,27 +542,29 @@ export default function ClientPage() {
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>Item Code</th>
-                                        <th>Weight</th>
-                                        <th>Boxes</th>
-                                        <th>Export Date</th>
-                                        <th>Total Price</th>
+                                        <th>رمز المنتج</th>
+                                        <th>الصناديق</th>
+                                        <th>الوزن</th>
+                                        <th>السعر/ كجم</th>
+                                        <th>تاريخ التصدير</th>
+                                        <th>السعر الإجمالي</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {
-                                        [...clientItems.entries()].map(([id, item]) => {
+                                        getFilteredClientItems().map(([id, item]) => {
                                             return <tr key={id} className='nohover'>
-                                                <td>{item.productName} - {item.supplierName} - {showDate(item.importDate.toDate())}</td>
-                                                <td>{item.mass}</td>
+                                                <td>{`${item.productName} - ${item.supplierName} - ${formatArabicDate(item.importDate.toDate())}`}</td>
                                                 <td>{item.boxes}</td>
-                                                <td>{showDate(item.createdAt.toDate())}</td>
+                                                <td>{item.mass}</td>
+                                                <td>{item.price}</td>
+                                                <td>{formatDateSafe(item.createdAt)}</td>
                                                 <td>{item.price * item.mass}</td>
                                             </tr>
                                         })
                                     }
                                     <tr className='nohover'>
-                                        <td style={{ fontWeight: '700' }}> Total </td>
+                                        <td style={{ fontWeight: '700' }}>الإجمالي</td>
                                         <td> -- </td>
                                         <td> -- </td>
                                         <td> -- </td>
@@ -414,31 +573,31 @@ export default function ClientPage() {
                                 </tbody>
                             </table> :
                             <div>
-                                There is no receipts yet, add a client to interact with him
+                                لا توجد إيصالات حتى الآن، أضف عميلاً للتفاعل معه
                             </div>
                     }
                     {
                         vaultRecs ?
                             <>
-                                <span style={{ fontWeight: 600, fontSize: 20, marginTop: 10, marginBottom: 10 }}>Payments</span>
+                                <span style={{ fontWeight: 600, fontSize: 20, margin: '10px 0', display: 'block' }}>المدفوعات</span>
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th>Date</th>
-                                            <th>Amount</th>
+                                            <th style={{width:'30%'}}>التاريخ</th>
+                                            <th style={{width:'30%'}}>المبلغ</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {
                                             [...vaultRecs.entries()].map(([id, item]) => {
                                                 return <tr key={id} className='nohover'>
-                                                    <td>{showDate(item.createdAt?.toDate())}</td>
+                                                    <td>{formatDateSafe(item.createdAt)}</td>
                                                     <td>{item.amount}</td>
                                                 </tr>
                                             })
                                         }
                                         <tr className='nohover'>
-                                            <td style={{ fontWeight: '700' }}> Total </td>
+                                            <td style={{ fontWeight: '700' }}>الإجمالي</td>
                                             <td style={{ fontWeight: '700' }}>{totalMoney}</td>
                                         </tr>
                                     </tbody>

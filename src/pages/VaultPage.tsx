@@ -2,27 +2,46 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext';
 import { FIREBASE_CREATING_ERROR, FIREBASE_ERROR, FIREBASE_NAME_EXISTS_ERROR, FIREBASE_NOTFOUND_ERROR } from '../config/Constants';
 import { FirebaseError } from '../errors/FirebaseError';
-import { createProduct, getAllProducts, getProduct } from '../backend/products';
 import Layout from './Layout';
 import { ExtendedVaultRec, Item, PageType, Product, VaultRec, VaultRecType } from '../utils/types';
 import { useNavigate } from 'react-router-dom';
 import { getVaultRecsHelper } from '../backend/vault';
 import { showDate } from '../utils/date';
 import RangePicker from '../components/RangePicker';
+import { payHelper } from '../backend/vault';
+import { getPaidHelper } from '../backend/vault';
+import { getAllClients } from '../backend/clients';
+import { getAllSuppliers } from '../backend/suppliers';
+import './styles/vaultPage.css';
+import 'react-date-range/dist/styles.css';
+import 'react-date-range/dist/theme/default.css';
 
 export default function VaultPage() {
     const { db } = useAuth();
     const [vaultRecs, setVaultRecs] = useState<Map<string, ExtendedVaultRec>>();
     const navigate = useNavigate();
     const [profit, setProfit] = useState(0);
+    const [clients, setClients] = useState<Map<string, any>>();
+    const [suppliers, setSuppliers] = useState<Map<string, any>>();
+    const [showCustomerPayModal, setShowCustomerPayModal] = useState(false);
+    const [showSupplierPayModal, setShowSupplierPayModal] = useState(false);
+    const [selectedClientUuid, setSelectedClientUuid] = useState('');
+    const [selectedSupplierUuid, setSelectedSupplierUuid] = useState('');
+    const [paymentAmount, setPaymentAmount] = useState('');
+    const [searchClientTerm, setSearchClientTerm] = useState('');
+    const [searchSupplierTerm, setSearchSupplierTerm] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+    const [isSupplierDropdownOpen, setIsSupplierDropdownOpen] = useState(false);
+    const [filteredVaultRecs, setFilteredVaultRecs] = useState<[string, ExtendedVaultRec][]>([]);
 
     const getVaultRecs = async (startDate?: Date, endDate?: Date) => {
         try {
             const vaultRecs = await getVaultRecsHelper(db!, startDate, endDate);
             if (vaultRecs) {
-                console.log("vaultRecs");
-                console.log(vaultRecs);
                 setVaultRecs(vaultRecs);
+                // Initialize filtered records
+                setFilteredVaultRecs([...vaultRecs.entries()]);
                 let total = 0;
                 vaultRecs.forEach(vaultRec => {
                     total += vaultRec.type == VaultRecType.OUT ? -vaultRec.amount : vaultRec.type == VaultRecType.IN ? vaultRec.amount : 0;
@@ -30,26 +49,39 @@ export default function VaultPage() {
                 setProfit(total);
             }
         } catch (error) {
-            if (error instanceof FirebaseError) {
-                if (error.code === FIREBASE_ERROR) {
-                    console.log("ERROR");
-                    // JOE: FIX this
-                    /* showMessage({
-                        message: 'Success',
-                        description: 'حدث خطأ ما , برجاء المحاولة مرة أخري لاحقا ',
-                        type: 'success',
-                        duration: 3000,
-                        floating: true,
-                        autoHide: true,
-                    }); */
-                } else if (error.code === FIREBASE_NOTFOUND_ERROR) {
-                    // JOE
-                } else {
-                    console.error('An error occurred with code:', error.code);
-                }
-            } else {
-                console.error('An unexpected error occurred:', error);
+            console.error('حدث خطأ أثناء جلب سجلات الخزينة', error);
+        }
+    }
+
+    // Update filtered records whenever search term or vault records change
+    useEffect(() => {
+        if (vaultRecs) {
+            const filtered = [...vaultRecs.entries()].filter(([_, rec]) =>
+                rec.userName.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            setFilteredVaultRecs(filtered);
+        }
+    }, [searchTerm, vaultRecs]);
+
+    const getClients = async () => {
+        try {
+            const clients = await getAllClients(db!);
+            if (clients) {
+                setClients(clients);
             }
+        } catch (error) {
+            console.error('حدث خطأ أثناء جلب العملاء', error);
+        }
+    }
+
+    const getSuppliers = async () => {
+        try {
+            const suppliers = await getAllSuppliers(db!);
+            if (suppliers) {
+                setSuppliers(suppliers);
+            }
+        } catch (error) {
+            console.error('حدث خطأ أثناء جلب الموردين', error);
         }
     }
 
@@ -59,54 +91,234 @@ export default function VaultPage() {
 
     useEffect(() => {
         getVaultRecs();
+        getClients();
+        getSuppliers();
     }, []);
+
+    const supplierPay = async () => {
+        if (!selectedSupplierUuid || !paymentAmount) return;
+
+        try {
+            const vaultRecUuid = await payHelper(db!, selectedSupplierUuid, parseFloat(paymentAmount));
+            if (vaultRecUuid) {
+                setShowSupplierPayModal(false);
+                setSelectedSupplierUuid('');
+                setPaymentAmount('');
+                await getVaultRecs();
+            }
+        } catch (error) {
+            console.error('حدث خطأ أثناء دفع مبلغ للمورد', error);
+        }
+    }
+
+    const customerPay = async () => {
+        if (!selectedClientUuid || !paymentAmount) return;
+
+        try {
+            const vaultRecUuid = await getPaidHelper(db!, selectedClientUuid, parseFloat(paymentAmount));
+            if (vaultRecUuid) {
+                setShowCustomerPayModal(false);
+                setSelectedClientUuid('');
+                setPaymentAmount('');
+                await getVaultRecs();
+            }
+        } catch (error) {
+            console.error('حدث خطأ أثناء استلام مبلغ من العميل', error);
+        }
+    }
+
+    const filteredClients = clients ? [...clients.entries()].filter(
+        ([_, client]) => 
+            client.username.toLowerCase().includes(searchClientTerm.toLowerCase()) ||
+            client.phone?.includes(searchClientTerm)
+    ) : [];
+
+    const filteredSuppliers = suppliers ? [...suppliers.entries()].filter(
+        ([_, supplier]) => 
+            supplier.username.toLowerCase().includes(searchSupplierTerm.toLowerCase()) ||
+            supplier.phone?.includes(searchSupplierTerm)
+    ) : [];
+
+    const handleClientSelect = (uuid: string, username: string) => {
+        setSelectedClientUuid(uuid);
+        setSearchClientTerm(username);
+        setIsClientDropdownOpen(false);
+    }
+
+    const handleSupplierSelect = (uuid: string, username: string) => {
+        setSelectedSupplierUuid(uuid);
+        setSearchSupplierTerm(username);
+        setIsSupplierDropdownOpen(false);
+    }
 
     return (
         <Layout page={PageType.VAULT}>
             <div className='top'>
-                <h2 className='title'>Vault Records</h2>
+                <h2 className='title'>سجلات الخزينة</h2>
                 <div className='right-data'>
-                    <div className='badges'>
-                        <span className='badge weight'>Profit: {profit}</span>
-                    </div>
                     <div className='btns'>
-                        <button className='btn add'>
-                            <span>Add New</span>
-                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <g id="Edit / Add_Plus">
-                                    <path id="Vector" d="M6 12H12M12 12H18M12 12V18M12 12V6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </g>
-                            </svg>
+                        <button 
+                            className='btn add customer-pay large-btn mr-2' 
+                            onClick={() => setShowCustomerPayModal(true)}
+                        >
+                            <span>استلام من عميل</span>
+                        </button>
+                        <button 
+                            className='btn add supplier-pay large-btn' 
+                            onClick={() => setShowSupplierPayModal(true)}
+                        >
+                            <span>دفع لمورد</span>
                         </button>
                     </div>
                 </div>
             </div>
+
+            {/* Customer Pay Modal */}
+            {showCustomerPayModal && (
+                <div className='modal'>
+                    <div className='modal-content'>
+                        <h3>استلام مبلغ من عميل</h3>
+                        <div className='input-container'>
+                            <input 
+                                type="text" 
+                                placeholder="بحث باسم أو رقم العميل" 
+                                value={searchClientTerm}
+                                onChange={(e) => {
+                                    setSearchClientTerm(e.target.value);
+                                    setIsClientDropdownOpen(true);
+                                }}
+                                onFocus={() => setIsClientDropdownOpen(true)}
+                                className='search-input mb-2'
+                            />
+                            {isClientDropdownOpen && filteredClients.length > 0 && (
+                                <select 
+                                    size={Math.min(filteredClients.length, 5)}
+                                    className='search-dropdown'
+                                    onChange={(e) => {
+                                        const [uuid, client] = filteredClients[parseInt(e.target.value)];
+                                        handleClientSelect(uuid, client.username);
+                                    }}
+                                >
+                                    {filteredClients.map(([uuid, client], index) => (
+                                        <option key={uuid} value={index}>
+                                            {client.username} - {client.number || 'لا يوجد رقم'}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+                        </div>
+                        <input 
+                            type="number" 
+                            placeholder="المبلغ" 
+                            value={paymentAmount}
+                            onChange={(e) => setPaymentAmount(e.target.value)}
+                            className='amount-input mb-2'
+                        />
+                        <div className='modal-actions'>
+                            <button onClick={customerPay} disabled={!selectedClientUuid || !paymentAmount}>
+                                تأكيد
+                            </button>
+                            <button onClick={() => {
+                                setShowCustomerPayModal(false);
+                                setSearchClientTerm('');
+                                setSelectedClientUuid('');
+                            }}>
+                                إلغاء
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Supplier Pay Modal */}
+            {showSupplierPayModal && (
+                <div className='modal'>
+                    <div className='modal-content'>
+                        <h3>دفع مبلغ لمورد</h3>
+                        <div className='input-container'>
+                            <input 
+                                type="text" 
+                                placeholder="بحث باسم أو رقم المورد" 
+                                value={searchSupplierTerm}
+                                onChange={(e) => {
+                                    setSearchSupplierTerm(e.target.value);
+                                    setIsSupplierDropdownOpen(true);
+                                }}
+                                onFocus={() => setIsSupplierDropdownOpen(true)}
+                                className='search-input mb-2'
+                            />
+                            {isSupplierDropdownOpen && filteredSuppliers.length > 0 && (
+                                <select 
+                                    size={Math.min(filteredSuppliers.length, 5)}
+                                    className='search-dropdown'
+                                    onChange={(e) => {
+                                        const [uuid, supplier] = filteredSuppliers[parseInt(e.target.value)];
+                                        handleSupplierSelect(uuid, supplier.username);
+                                    }}
+                                >
+                                    {filteredSuppliers.map(([uuid, supplier], index) => (
+                                        <option key={uuid} value={index}>
+                                            {supplier.username} - {supplier.number || 'لا يوجد رقم'}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+                        </div>
+                        <input 
+                            type="number" 
+                            placeholder="المبلغ" 
+                            value={paymentAmount}
+                            onChange={(e) => setPaymentAmount(e.target.value)}
+                            className='amount-input mb-2'
+                        />
+                        <div className='modal-actions'>
+                            <button onClick={supplierPay} disabled={!selectedSupplierUuid || !paymentAmount}>
+                                تأكيد
+                            </button>
+                            <button onClick={() => {
+                                setShowSupplierPayModal(false);
+                                setSearchSupplierTerm('');
+                                setSelectedSupplierUuid('');
+                            }}>
+                                إلغاء
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className='bottom'>
                 <div className='bottom-header'>
                     <div className='input-container'>
-                        <input className='search' placeholder='Search Here' />
+                        <input 
+                            className='search' 
+                            placeholder='البحث هنا'
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                         <svg className='icon' viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M16.6725 16.6412L21 21M19 11C19 15.4183 15.4183 19 11 19C6.58172 19 3 15.4183 3 11C3 6.58172 6.58172 3 11 3C15.4183 3 19 6.58172 19 11Z" stroke="#777" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>
                     </div>
                     <RangePicker getFunction={getRangedData} />
                 </div>
-                <div className='bottom-contnet'>
+                <div className='bottom-content'>
                     {
                         vaultRecs ?
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>User Name</th>
-                                        <th>Amount</th>
-                                        <th>Date</th>
+                                        <th>التاريخ</th>
+                                        <th>المبلغ</th>
+                                        <th>اسم المستخدم</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {
-                                        [...vaultRecs.entries()].map(([id, rec]) => {
+                                        filteredVaultRecs.map(([id, rec]) => {
                                             return <tr key={id} className='nohover' >
-                                                <td className='table-link' onClick={() => navigate(`/${rec.type == VaultRecType.OUT ? 'suppliers' : 'clients'}/${rec.userUuid}`)}>{rec.userName}</td>
+                                                <td>{showDate(rec.createdAt.toDate())}</td>
+                                                
                                                 <td>
                                                     <div className='td-contents'>
                                                         {rec.type == VaultRecType.OUT ? <>{
@@ -122,14 +334,15 @@ export default function VaultPage() {
                                                                 "?"} {rec.amount}
                                                     </div>
                                                 </td>
-                                                <td>{showDate(rec.createdAt.toDate())}</td>
+
+                                                <td className='table-link' onClick={() => navigate(`/${rec.type == VaultRecType.OUT ? 'suppliers' : 'clients'}/${rec.userUuid}`)}>{rec.userName}</td>
                                             </tr>
                                         })
                                     }
                                 </tbody>
                             </table> :
                             <div>
-                                There is no vault records yet
+                                لا توجد سجلات خزينة بعد
                             </div>
                     }
                 </div>

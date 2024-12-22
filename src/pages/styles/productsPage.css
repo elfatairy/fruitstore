@@ -1,0 +1,297 @@
+/* Product Management Page Specific Styles */
+.product-management .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.product-management .top .btns {
+    display: flex;
+    gap: 10px;
+}
+
+.product-management .modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.product-management .modal-content {
+    background-color: #fefefe;
+    padding: 20px;
+    border-radius: 10px;
+    width: 500px;
+    max-width: 90%;
+    position: relative;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.product-management .modal .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.product-management .modal .close:hover {
+    color: black;
+}
+
+.product-management .modal form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.product-management .modal input {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+
+.product-management .modal button {
+    padding: 10px;
+    background-color: #2980b9;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.product-management .modal button:hover {
+    background-color: #3498db;
+}
+
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80%;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.modal .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.modal .close:hover,
+.modal .close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.modal form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.modal .form-group {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.modal .form-group select {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+}
+
+.modal .item-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 10px;
+    align-items: center;
+}
+
+.modal .modal-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+}
+
+.modal input,
+.modal select {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: right;
+}
+
+.modal button {
+    padding: 10px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.modal button:hover {
+    background-color: #45a049;
+}
+
+.modal button[type="button"] {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.modal button[type="button"]:hover {
+    background-color: #e0e0e0;
+}
+
+
+
+
+/* Keep existing modal base styles... */
+
+/* Updated styles for the import form item rows */
+.modal .item-row {
+    background-color: #f8f9fa;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Style for the product select container */
+.modal .item-row .form-group:first-child {
+    margin-bottom: 30px;
+    width: 100%;
+}
+
+/* Style for the product select dropdown */
+.modal .item-row select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    background-color: white;
+    font-size: 14px;
+}
+
+/* Container for the three input fields */
+.modal .item-row .input-fields-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    width: 100%;
+}
+
+/* Style for input fields */
+.modal .item-row input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    background-color: white;
+    font-size: 14px;
+}
+
+/* Hover effects for inputs and select */
+.modal .item-row input:hover,
+.modal .item-row select:hover {
+    border-color: #a0aec0;
+}
+
+.modal .item-row input:focus,
+.modal .item-row select:focus {
+    border-color: #4299e1;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+}
+
+/* Label styling */
+.modal .form-group label {
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #4a5568;
+}
+
+/* Update modal content max-width for better display */
+.modal-content {
+    max-width: 700px;
+    background-color: white;
+    padding: 24px;
+}
+
+/* Style for the product search input and select combination */
+.modal .item-row .form-group:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Search input styling */
+.modal .item-row .form-group:first-child input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px 6px 0 0;
+    background-color: white;
+    font-size: 14px;
+}
+
+/* Select styling when paired with search */
+.modal .item-row .form-group:first-child select {
+    border-radius: 0 0 6px 6px;
+    border-top: none;
+    margin-top: -1px;
+}
+
+/* Hover and focus states for search input */
+.modal .item-row .form-group:first-child input:hover,
+.modal .item-row .form-group:first-child input:focus {
+    border-color: #4299e1;
+    position: relative;
+    z-index: 1;
+}
+
+/* Make sure the select is above other elements when focused */
+.modal .item-row .form-group:first-child select:focus {
+    position: relative;
+    z-index: 1;
+}
